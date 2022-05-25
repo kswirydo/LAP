@@ -4,23 +4,11 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include "cublas_v2.h"
+#include <string.h>
 #include "common.h"
+#include "blas.h"
 //Gauss-Seidel, classic version
 
-__global__ void squareofDTimesX(const int n,
-    const double * dd,
-    const double *x,
-    double *y){
-  int idx = blockIdx.x * blockDim.x + threadIdx.x; 
-  double temp;
-  while (idx < n){
-    temp = dd[idx];
-    if (temp <0) temp *=(-1.0f);
-    y[idx] =  x[idx]*sqrt(temp);
-  }
-  idx += blockDim.x * gridDim.x;
-}
 
 
 // needed for easy sorting
@@ -29,6 +17,7 @@ struct indexPlusValue
   double value;
   int idx;
 };
+typedef struct indexPlusValue indexPlusValue;
 
 //neded for qsort
 
@@ -366,90 +355,141 @@ int main(int argc, char *argv[])
   read_mm_file(matrixFileName, A);
   coo_to_csr(A); 
 
-  int weighted = 1;
+  int weighted = 0;
   create_L_and_split(A,L, U,D, weighted);
   //at this point we know our LAPLACIAN !
   //NOTE: Laplacian is stored in A= L+U+D (matrix splitting).
   //DONT CONFUSE degree matrix with D (D is a diagonal of A) and L with Laplacian (L is lower triangular part of A)
 
   //allocate space for the GPU
-  double *d_e, *d_etilde, *d_b, *d_d;
+  //  double *d_e, *d_etilde, *d_b, *d_d;
 
   double *e = (double *) calloc (A->n, sizeof(double));
   double *b = (double *) calloc (A->n, sizeof(double));
   //vector of vertex degrees
   double *d = (double *) calloc (A->n, sizeof(double));
+  double *aux = (double *) calloc (A->n, sizeof(double));
   for (int i=0; i<A->n; ++i) {
     e[i]= 1.0f;
-    b[i] =(double) (rand()%200)/(rand()%100);
+    b[i] = pow((-1.0),((i%2)));
+//(double) (rand()%200)/(rand()%100);
     d[i] = A->csr_ia[i+1]-A->csr_ia[i]-1; //dont count yourself
-    printf("b[%d] = %f \n", i, b[i]);
+    //printf("b[%d] = %f \n", i, b[i]);
   }
 
   //create an rhs.
 
-  cudaMalloc(&d_e, A->n * sizeof(double));
-  cudaMalloc(&d_b, A->n * sizeof(double));
-  cudaMalloc(&d_d, A->n * sizeof(double));
-
-  cudaMemcpy(d_e, e, sizeof(double) * A->n, cudaMemcpyHostToDevice);
-  cudaMemcpy(d_b, b, sizeof(double) * A->n, cudaMemcpyHostToDevice);
-  cudaMemcpy(d_d, d, sizeof(double) * A->n, cudaMemcpyHostToDevice);
   double norme = (double) sqrt(A->n);  
   double one_over_norme = 1./norme;
   printf ("scaling e by %16.16f, norme %16.16e \n", one_over_norme, norme);
 
-  cublasHandle_t cublas_handle;
-  cublasCreate(&cublas_handle);
   if (weighted == 0){
     double be;
     /* e = (1/norme) e;*/
-    cublasDscal(cublas_handle, A->n, &one_over_norme, d_e,1);
+    scal(A->n, one_over_norme, e);  
+    //  cublasDscal(cublas_handle, A->n, &one_over_norme, d_e,1);
     /* be = b'*e*/
-    cublasDdot (cublas_handle,A->n,d_e, 1, d_b,1, &be);
+    //   cublasDdot (cublas_handle,A->n,d_e, 1, d_b,1, &be);
+    be = dot(A->n, e, b);
     printf("dot product is %16.16f \n", be);
     /*b = b-be*e; */
     be = (-1.0f) * be;
-    cublasDaxpy(cublas_handle,A->n, &be,d_e, 1, d_b, 1);
+    //cublasDaxpy(cublas_handle,A->n, &be,d_e, 1, d_b, 1);
+    axpy(A->n, be, e, b); 
   }else {
     //weighted version
-    double *d_De;
-    double *d_D_csr_a; 
-    int * d_D_csr_ia, *d_D_csr_ja;
+    /* 
+       double *d_De;
+       double *d_D_csr_a; 
+       int * d_D_csr_ia, *d_D_csr_ja;
 
-    cudaMalloc(&d_De, A->n * sizeof(double));
-
-
-    cudaMalloc(&d_D_csr_a, A->n * sizeof(double));
+       cudaMalloc(&d_De, A->n * sizeof(double));
 
 
+       cudaMalloc(&d_D_csr_a, A->n * sizeof(double));
     //d_De = sqrt(D)*e
     squareofDTimesX<<<A->n/1024+1, 1024>>>(A->n,
-        d_d,
-        d_e,
-        d_De);
+    d_d,
+    d_e,
+    d_De);
+    */
+    //aux = sqrt(d);`
+    vector_sqrt(A->n, d, aux);
+
+    //aux = aux.*e
+    vec_vec(A->n, aux, e, aux);
     //De_norm = norm(D_De);
     double De_norm;
 
-    cublasDdot (cublas_handle,A->n,d_De, 1, d_De,1, &De_norm);
-    De_norm = sqrt(De_norm);
-
+    //    cublasDdot (cublas_handle,A->n,d_De, 1, d_De,1, &De_norm);
+    De_norm = dot(A->n, aux, aux);  
+    De_norm = 1.0/sqrt(De_norm);
     //De = (1/norm(De))*De;
 
-    cublasDscal(cublas_handle, A->n, &De_norm, d_De,1);
+    //  cublasDscal(cublas_handle, A->n, &De_norm, d_De,1);
+    scal(A->n, De_norm, aux);
 
     //   bwe = b'*De;
     double bwe;
 
-    cublasDdot (cublas_handle,A->n,d_De, 1, d_b,1, &bwe);
+    //  cublasDdot (cublas_handle,A->n,d_De, 1, d_b,1, &bwe);
+    bwe = dot(A->n, b, aux);  
     //bProjw = b- bwe*wetilde;
     bwe *= (-1.0f);
-    cublasDaxpy(cublas_handle,A->n, &bwe,d_De, 1, d_b, 1);
+    //    cublasDaxpy(cublas_handle,A->n, &bwe,d_De, 1, d_b, 1);
+    axpy(A->n,bwe, aux, b);
   }
   // at this point the Laplacian and the rhs are created.
+  pdata * prec_data;  
+//for(int i=0; i<A->n; ++i) printf("b[%d] = %f\n", i, b[i]);
+  prec_data = (pdata *)calloc(1, sizeof(pdata));
+  prec_data->n = A->n;
+  prec_data->lnnz = L->nnz;
+  prec_data->unnz = U->nnz;
+
+  prec_data->lia = L->csr_ia;
+  prec_data->lja = L->csr_ja;
+  prec_data->la = L->csr_vals;
+
+  prec_data->uia = U->csr_ia;
+  prec_data->uja = U->csr_ja;
+  prec_data->ua = U->csr_vals;
+
+  prec_data->prec_op = "it_jacobi";
+  prec_data->k = 6;
+  prec_data->m = 6;
 
 
+  double *dd = (double *) calloc (A->n, sizeof(double));
+  vector_reciprocal(A->n, d, dd);
 
+  double *aux_vec1 = (double *) calloc (A->n, sizeof(double));
+  double *aux_vec2 = (double *) calloc (A->n, sizeof(double));
+  double *aux_vec3 = (double *) calloc (A->n, sizeof(double));
+  double *x = (double *) calloc (A->n, sizeof(double));
+  double *res_hist = (double *) calloc (1002, sizeof(double));
+  prec_data->d = d;
+  prec_data->d_r = dd;
 
+  prec_data->aux_vec1 = aux_vec1;
+  prec_data->aux_vec2 = aux_vec2;
+  prec_data->aux_vec3 = aux_vec3;
+
+  int it, flag;
+  cg(A->n,
+     A->nnz,
+     A->csr_ia, //matrix csr data
+     A->csr_ja,
+     A->csr_vals,
+     x, //solution vector, mmust be alocated prior to calling
+     b, //rhs
+     1e-12, //DONT MULTIPLY BY NORM OF B
+     prec_data, //preconditioner data: all Ls, Us etc
+     25,
+     &it, //output: iteration
+     &flag, //output: flag 0-converged, 1-maxit reached, 2-catastrophic failure
+     res_hist //output: residual norm history
+    );
+printf("cg done, it: %d\n", it);
   return 0;
 }

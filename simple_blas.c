@@ -1,5 +1,5 @@
-
-
+#include "simple_blas.h"
+#include <math.h>
 double simple_dot (const int n, const double *v, const double *w){
   double sum = 0.0f;
   for (int i=0; i<n; ++i){
@@ -20,7 +20,7 @@ void simple_axpy (const int n, const double alpha, const double *x, double *y){
   }
 }
 
-void simple_csr_matvec(const int n, const int nnz, const int *ia, const int *ja, const int *a, const double *x, double *result){
+void simple_csr_matvec(const int n, const int nnz, const int *ia, const int *ja, const double *a, const double *x, double *result){
   //intialize result to 0
   for (int i=0; i<n; ++i){
     result[i] = 0.0f;
@@ -36,32 +36,41 @@ void simple_csr_matvec(const int n, const int nnz, const int *ia, const int *ja,
   }
 }
 
-void simple_lower_triangular_solve(const int n, const int nnz, const int *lia, const int *lja, const int *la, const double *x, double *result){
+void simple_lower_triangular_solve(const int n, const int nnz, const int *lia, const int *lja, const double *la,const double *diagonal, const double *x, double *result){
   //compute result = L^{-1}x 
   ////we DO NOT assume anything about L diagonal
   //go through each row (starting from 0)
   for (int i=0; i<n; ++i){
     result[i] = x[i];
-    for (int j=lia[i]; j<lia[i+1]-1; ++j){
+    for (int j=lia[i]; j<lia[i+1]; ++j){
       int col = lja[j];
-      result[i] -= la[j]*result[col];
-    }
+      
+//printf("this is row %d column %d is nnz, value %f, subtracting %f*%f from x[%d]=%f\n", i, col, la[j], la[j], result[col], i, result[i]);
+result[i] -= la[j]*result[col]; 
+   }
+#if 0
+printf("diagonal entry %d: %f \n", i,  la[lia[i+1]-1]);
     result[i] /= la[lia[i+1]-1]; //divide by the diagonal entry
-  }
+#endif 
+
+//printf("and diving x[%d]=%f by %f \n", i, result[i], diagonal[i]);
+result[i] /=diagonal[i];
+ }
 }
 
 
-void simple_uppper_triangular_solve(const int n, const int nnz, const int *uia, const int *uja, const int *ua, const double *x, double *result){
+void simple_upper_triangular_solve(const int n, const int nnz, const int *uia, const int *uja, const double *ua, const double *diagonal, const double *x, double *result){
   //compute result = U^{-1}x 
   ////we DO NOT assume anything about L diagonal
   //go through each row (starting from the last row)
   for (int i=n-1; i>=0; --i){
     result[i] = x[i];
-    for (int j=uia[i]+1; j<uia[i+1]; ++j){
+    for (int j=uia[i]; j<uia[i+1]; ++j){
       int col = uja[j];
       result[i] -= ua[j]*result[col];
     }
-    result[i] /= ua[uia[i]]; //divide by the diagonal entry
+//    result[i] /= ua[uia[i]]; //divide by the diagonal entry
+result[i] /=diagonal[i];
   }
 }
 
@@ -104,10 +113,10 @@ void simple_vec_copy(const int n, const double *src, double *dest){
 }
 
 
-void simple_vec_zero(const int n, const double *vec){
+void simple_vec_zero(const int n, double *vec){
 
   for (int i=0; i<n; ++i){
-    vec[i] = 0.0f;;  
+    vec[i] = 0.0f;  
   }
 }
 //add vec_copy

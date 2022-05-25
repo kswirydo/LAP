@@ -1,5 +1,6 @@
-#include "simple_blas.h":1
-
+#include "simple_blas.h"
+#include "blas.h"
+#define NOACC 1
 double dot (const int n, const double *v, const double *w){
   double d;
 #if NOACC
@@ -21,47 +22,53 @@ void scal (const int n, const double alpha, double *v){
 #endif
 }
 
-void csr_matvec(const int n, const int nnz, const int *ia, const int *ja, const int *a, const double *x, double *result){
+void csr_matvec(const int n, const int nnz, const int *ia, const int *ja, const double *a, const double *x, double *result){
 #if NOACC
   simple_csr_matvec(n, nnz, ia, ja, a, x, result);
 #endif
 }
 
-void lower_triangular_solve(const int n, const int nnz, const int *lia, const int *lja, const int *la, const double *x, double *result){
+void lower_triangular_solve(const int n, const int nnz, const int *lia, const int *lja, const double *la,const double * diag, const double *x, double *result){
 #if NOACC
-  simple_lower_triangular_solve(n, nnz, lia, lja, la, x, result);
+  simple_lower_triangular_solve(n, nnz, lia, lja, la, diag, x, result);
 #endif
 }
 
-void uppper_triangular_solve(const int n, const int nnz, const int *uia, const int *uja, const int *ua, const double *x, double *result){
+void upper_triangular_solve(const int n, const int nnz, const int *uia, const int *uja, const double *ua,const double *diag, const double *x, double *result){
 #if NOACC
-  simple_upper_triangular_solve(n, nnz, uia, uja, ua, x, result);
+  simple_upper_triangular_solve(n, nnz, uia, uja, ua,diag, x, result);
 #endif
 }
 
-void vec_vec(const int n, const double * x, const double * y, double *res){
+void vec_vec(const int n, const double * x, double * y, double *res){
 #if NOACC
-simple_vec_vec(n, x, const y, res);
+  simple_vec_vec(n, x, y, res);
 #endif
 }
 
 
 void vector_reciprocal(const int n, const double *v, double *res){
 #if NOACC
-simple_vector_reciprocal(n, v, res);
+  simple_vector_reciprocal(n, v, res);
 #endif
 }
 
 
 void vector_sqrt(const int n, const double *v, double *res){
 #if NOACC
-simple_vector_sqrt(n, v, res);
+  simple_vector_sqrt(n, v, res);
 #endif
 }
 
 
 void vec_copy(const int n, double *src, double *dest){
 #if NOACC
-simple_vec_copy(n, v, src, dest);
+  simple_vec_copy(n, src, dest);
+#endif
+}
+
+void vec_zero(const int n, double *vec){
+#if NOACC
+  simple_vec_zero(n, vec);
 #endif
 }
