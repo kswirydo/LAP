@@ -20,18 +20,23 @@ void simple_axpy (const int n, const double alpha, const double *x, double *y){
   }
 }
 
-void simple_csr_matvec(const int n, const int nnz, const int *ia, const int *ja, const double *a, const double *x, double *result){
+void simple_csr_matvec(const int n, const int nnz, const int *ia, const int *ja, const double *a, const double *x, double *result,const  double*al, const double *bet){
+double alpha = *al;
+double beta = *bet;
+//printf ("alpha = %f, beta = %f\n", alpha, beta);
   //intialize result to 0
-  for (int i=0; i<n; ++i){
+/* 
+ for (int i=0; i<n; ++i){
     result[i] = 0.0f;
   }
-
+*/
   //go through every row
   for (int i=0; i<n; ++i){
     //go through each column in this row
+      result[i] *= beta;  
     for (int j=ia[i]; j<ia[i+1]; j++){
       int col = ja[j];
-      result[i] += a[j]*x[col];  
+      result[i] += (alpha*a[j]*x[col]);
     }
   }
 }

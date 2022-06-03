@@ -1,8 +1,10 @@
 #include<math.h>
 #include<stdio.h>
 #include <stdlib.h>
+#pragma once
 
-
+#define NOACC 0
+#define CUDA 1
 typedef struct{
  
   int *lia;

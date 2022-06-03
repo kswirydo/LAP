@@ -1,4 +1,5 @@
 
+#include "common.h"
 double cuda_dot (const int n, const double *v, const double *w);
 
 void cuda_scal (const int n, const double alpha, double *v);
@@ -20,3 +21,37 @@ void cuda_vector_reciprocal(const int n, const double *v, double *res);
 void cuda_vec_copy(const int n, const double *src, double *dest);
 
 void cuda_vec_zero(const int n, double *vec);
+void initialize_handles();
+
+
+void initialize_spmv_buffer(const int n, 
+                            const int nnz, 
+                            int *ia, 
+                            int *ja, 
+                            double *a, 
+                            const double *x, 
+                            double *result, 
+                            double *al, 
+                            double *bet);
+
+
+void initialize_and_analyze_L_and_U_solve(const int n, 
+                                          const int nnzL, 
+                                          int *lia, 
+                                          int *lja, 
+                                          double *la,
+                                          const int nnzU, 
+                                          int *uia, 
+                                          int *uja, 
+                                          double *ua);
+
+
+void initialize_L_and_U_descriptors(const int n, 
+                                  const int nnzL, 
+                                  int *lia, 
+                                  int *lja, 
+                                  double *la,
+                                  const int nnzU, 
+                                  int *uia, 
+                                  int *uja, 
+                                  double *ua);

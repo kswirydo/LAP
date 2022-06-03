@@ -5,16 +5,19 @@ void GS_std(int *ia, int *ja, double *a, int nnzA,  pdata* prec_data, double *ve
 
   int n = prec_data->n;
   int k = prec_data->k;
+  double one = 1.0;
+  double zero = 0.0;  
+  double minusone = -1.0;
   vec_zero(n, vec_out);
+printf("k = %d\n", k);
   //backward sweep
   for (int i=0; i<k; ++i){
     //x = x + L \ ( b - As*x );
     //printf("before mv: %f \n", dot(n, vec_out, vec_out)); 
-    csr_matvec(n, nnzA,ia,  ja,  a, vec_out,  prec_data->aux_vec1);
-    //printf("after mv: %f \n", dot(n, prec_data->aux_vec1, prec_data->aux_vec1)); 
     vec_copy(n, vec_in, prec_data->aux_vec2);
+    csr_matvec(n, nnzA,ia,  ja,  a, vec_out,  prec_data->aux_vec2, &minusone, &one);
+    //printf("after mv: %f \n", dot(n, prec_data->aux_vec1, prec_data->aux_vec1)); 
     //aux_vec2 = aux_vec1*(-1) +vec_in
-    axpy(n, -1.0f, prec_data->aux_vec1, prec_data->aux_vec2);
     //tri solve L^{-1}*aux_vec2
 
     //printf(" norm r sq: %f \n", dot(n, prec_data->aux_vec2, prec_data->aux_vec2)); 
@@ -32,10 +35,8 @@ void GS_std(int *ia, int *ja, double *a, int nnzA,  pdata* prec_data, double *ve
     //x = x + L \ ( b - As*x );
     //prec_data->aux_vec1 = A*vec_out 
 
-    csr_matvec(n, nnzA,ia,  ja,  a, vec_out,  prec_data->aux_vec1);
     vec_copy(n, vec_in, prec_data->aux_vec2);
-    //aux_vec2 = aux_vec1*(-1) +vec_in
-    axpy(n, -1.0f, prec_data->aux_vec1, prec_data->aux_vec2);
+    csr_matvec(n, nnzA,ia,  ja,  a, vec_out,  prec_data->aux_vec2, &minusone, &one);
     //tri solve U^{-1}*aux_vec2
 
     upper_triangular_solve(n, prec_data->unnz, prec_data->uia, prec_data->uja, prec_data->ua,prec_data->d, prec_data->aux_vec2, prec_data->aux_vec1);
@@ -50,6 +51,9 @@ void GS_it(int *ia, int *ja, double *a,int nnzA, pdata* prec_data, double *vec_i
 
   int k = prec_data->k;
 
+  double one = 1.0;
+  double zero = 0.0;  
+  double minusone = -1.0;
   int m = prec_data->m;
   //printf("m = %d k = %d \n", m, k);  
   //set vec_out to 0
@@ -57,34 +61,38 @@ void GS_it(int *ia, int *ja, double *a,int nnzA, pdata* prec_data, double *vec_i
   //outer loop
   for (int j=0; j<m; ++j){
     //r = b - A*x
-    csr_matvec(n, nnzA,ia,  ja,  a, vec_out,  prec_data->aux_vec1);
     vec_copy(n, vec_in, prec_data->aux_vec2);
-    //r = aux_vec2 = aux_vec1*(-1) +vec_in
-    //dont overwrite r !!
-    axpy(n, -1.0f, prec_data->aux_vec1, prec_data->aux_vec2);
+  
+  csr_matvec(n, nnzA,ia,  ja,  a, vec_out,  prec_data->aux_vec2, &minusone, &one);
+//printf("res nrm %f \n", dot(n,  prec_data->aux_vec2,  prec_data->aux_vec2));  
+  //r = aux_vec2 = aux_vec1*(-1) +vec_in
     // y = aux_vec1 = D^{-1}aux_vec2
     vec_vec(n, prec_data->aux_vec2, prec_data->d_r, prec_data->aux_vec1); 
+//printf("res nrm after scaling %f \n", dot(n,  prec_data->aux_vec1,  prec_data->aux_vec1));  
     for (int i=0; i<k; ++i){
       //y = v.*(r-L*y);
       //vec3 = L*vec1    
-      csr_matvec(n, prec_data->lnnz,prec_data->lia,prec_data->lja,  prec_data->la, prec_data->aux_vec1, prec_data->aux_vec3);
+      vec_copy(n, prec_data->aux_vec2, prec_data->aux_vec3);      
+      csr_matvec(n, prec_data->lnnz,prec_data->lia,prec_data->lja,  prec_data->la, prec_data->aux_vec1, prec_data->aux_vec3, &minusone, &one);
       //axpy
-      //vec3 = r+(-1)*vec3
-      vec_copy(n, prec_data->aux_vec2, prec_data->aux_vec1);      
-      axpy(n, -1.0f, prec_data->aux_vec3, prec_data->aux_vec1);
-      vec_vec(n, prec_data->aux_vec1, prec_data->d_r, prec_data->aux_vec1); 
+
+//printf("\t res nrm inside first loop, after mv  %f \n", dot(n,   prec_data->aux_vec3,  prec_data->aux_vec3));  
+      vec_vec(n, prec_data->aux_vec3, prec_data->d_r, prec_data->aux_vec1); 
     }
 
+//printf("res nrm after first loop %f \n", dot(n,  prec_data->aux_vec1,  prec_data->aux_vec1));  
     for (int i=0; i<k; ++i){
       //y = v.*(r-L*y);
-      csr_matvec(n, prec_data->unnz,prec_data->uia,prec_data->uja,  prec_data->ua, prec_data->aux_vec1, prec_data->aux_vec3);
+      vec_copy(n, prec_data->aux_vec2, prec_data->aux_vec3);      
+      csr_matvec(n, prec_data->unnz,prec_data->uia,prec_data->uja,  prec_data->ua, prec_data->aux_vec1, prec_data->aux_vec3, &minusone, &one);
       //axpy
-      vec_copy(n, prec_data->aux_vec2, prec_data->aux_vec1);      
-      axpy(n, -1.0f, prec_data->aux_vec3, prec_data->aux_vec1);
-      vec_vec(n, prec_data->aux_vec1, prec_data->d_r, prec_data->aux_vec1); 
+      vec_vec(n, prec_data->aux_vec3, prec_data->d_r, prec_data->aux_vec1); 
     }
+
+//printf("res nrm after second %f \n", dot(n,  prec_data->aux_vec1,  prec_data->aux_vec1));  
     //vec_out = vec_out + vec1  
     axpy(n, 1.0f, prec_data->aux_vec1, vec_out);
+//printf("res nrm after update  %f \n", dot(n,  vec_out, vec_out));  
   }
 }
 //iterative GS v2
@@ -92,6 +100,9 @@ void GS_it2(int *ia, int *ja, double *a,int nnzA, pdata* prec_data, double *vec_
 
   int k = prec_data->k;
   int m = prec_data->m;
+  double one = 1.0;
+  double zero = 0.0;  
+  double minusone = -1.0; 
   //y = Dinv.*b;
   //
   int n = prec_data->n;
@@ -102,9 +113,9 @@ void GS_it2(int *ia, int *ja, double *a,int nnzA, pdata* prec_data, double *vec_
     //inner loop 1
     for (int i=0; i<1; ++i){
       //L*(Dinv*b)
-      csr_matvec(n, prec_data->lnnz,prec_data->lia,  prec_data->lja,  prec_data->la, prec_data->aux_vec1,  prec_data->aux_vec2);
+      csr_matvec(n, prec_data->lnnz,prec_data->lia,  prec_data->lja,  prec_data->la, prec_data->aux_vec1,  prec_data->aux_vec2, &one, &zero);
       //U*(Dinv*b)
-      csr_matvec(n, prec_data->unnz,prec_data->uia,  prec_data->uja,  prec_data->ua, prec_data->aux_vec1,  prec_data->aux_vec3);
+      csr_matvec(n, prec_data->unnz,prec_data->uia,  prec_data->uja,  prec_data->ua, prec_data->aux_vec1,  prec_data->aux_vec3, &one, &zero);
       //(U+L)Dinv*b
       axpy(n, 1.0f, prec_data->aux_vec3, prec_data->aux_vec2);
       vec_copy(n, vec_in, prec_data->aux_vec3);
@@ -117,44 +128,40 @@ void GS_it2(int *ia, int *ja, double *a,int nnzA, pdata* prec_data, double *vec_
     // vec3 = b 
     vec_copy(n, vec_in, prec_data->aux_vec3);
     //vec1 = L*y = L*vec2
-    csr_matvec(n, prec_data->lnnz,prec_data->lia,  prec_data->lja,  prec_data->la, prec_data->aux_vec2,  prec_data->aux_vec1);
+    csr_matvec(n, prec_data->lnnz,prec_data->lia,  prec_data->lja,  prec_data->la, prec_data->aux_vec2,  prec_data->aux_vec3, &minusone, &one);
     //r = b-L*y : vec3 =  vec3 - vec1
-    axpy(n, -1.0f, prec_data->aux_vec1, prec_data->aux_vec3);
     //inner loop 2
     for (int i=0; i<k; ++i){
       // y = (v).* ( r - U * y );
       //   vec1 = U*vec2 = U*y
-      csr_matvec(n, prec_data->unnz,prec_data->uia,  prec_data->uja,  prec_data->ua, prec_data->aux_vec2,  prec_data->aux_vec1);
+      vec_copy(n, prec_data->aux_vec3, prec_data->aux_vec1);
+      csr_matvec(n, prec_data->unnz,prec_data->uia,  prec_data->uja,  prec_data->ua, prec_data->aux_vec2,  prec_data->aux_vec1, &minusone, &one);
       //leave r alone dont change
 
-      vec_copy(n, prec_data->aux_vec3, prec_data->aux_vec2);
       //vec2 = vec2 -vec1 = r-U*y
-      axpy(n, -1.0f, prec_data->aux_vec1, prec_data->aux_vec2);
       //scale
 
-      vec_vec(n, prec_data->d_r, prec_data->aux_vec2, prec_data->aux_vec2);
+      vec_vec(n, prec_data->d_r, prec_data->aux_vec1, prec_data->aux_vec2);
     }
     //residual again
     //  r = b - U*y;
     // vec3 = b 
     vec_copy(n, vec_in, prec_data->aux_vec3);
     //vec1 = U*y = U*vec2
-    csr_matvec(n, prec_data->unnz,prec_data->uia,  prec_data->uja,  prec_data->ua, prec_data->aux_vec2,  prec_data->aux_vec1);
+    csr_matvec(n, prec_data->unnz,prec_data->uia,  prec_data->uja,  prec_data->ua, prec_data->aux_vec2,  prec_data->aux_vec3, &minusone, &one);
     //r = b-L*y : vec3 =  vec3 - vec1
-    axpy(n, -1.0f, prec_data->aux_vec1, prec_data->aux_vec3);
     //inner loop 3
     for (int i=0; i<k; ++i){
       //    y = (v).* ( r - L * y );
       //   vec1 = L*vec2 = L*y
-      csr_matvec(n, prec_data->lnnz,prec_data->lia,  prec_data->lja,  prec_data->la, prec_data->aux_vec2,  prec_data->aux_vec1);
+      vec_copy(n, prec_data->aux_vec3, prec_data->aux_vec1);
+      csr_matvec(n, prec_data->lnnz,prec_data->lia,  prec_data->lja,  prec_data->la, prec_data->aux_vec2,  prec_data->aux_vec1, &minusone, &one);
       //leave r alone dont change
 
-      vec_copy(n, prec_data->aux_vec3, prec_data->aux_vec2);
       //vec2 -vec1 = r-L*y
-      axpy(n, -1.0f, prec_data->aux_vec1, prec_data->aux_vec2);
       //scale
 
-      vec_vec(n, prec_data->d_r, prec_data->aux_vec2, prec_data->aux_vec2);
+      vec_vec(n, prec_data->d_r, prec_data->aux_vec1, prec_data->aux_vec2);
     }
     vec_copy(n, prec_data->aux_vec2,prec_data->aux_vec1);
 

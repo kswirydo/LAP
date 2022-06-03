@@ -9,15 +9,17 @@ void it_jacobi(int *ia, int *ja, double *a,int nnzA, pdata* prec_data, double *v
 
   //vec_out = v.*vec_in;
 int k = prec_data->k;
+double one = 1.0;
+double zero = 0.0;  
   vec_vec(n, prec_data->d_r, vec_in, vec_out);
 
   for (int i=0; i<k; ++i){
 
     //vec_out = (v).*(vec_in - U*vec_out-L*vec_out);
     //aux_vec1 = L*vec_out 
-    csr_matvec(n, prec_data->lnnz,  prec_data->lia,  prec_data->lja,  prec_data->la, vec_out,  prec_data->aux_vec1);
+    csr_matvec(n, prec_data->lnnz,  prec_data->lia,  prec_data->lja,  prec_data->la, vec_out,  prec_data->aux_vec1, &one, &zero);
     //aux_vec2=U*vec_oout
-    csr_matvec(n, prec_data->unnz,  prec_data->uia,  prec_data->uja,  prec_data->ua, vec_out,  prec_data->aux_vec2);
+    csr_matvec(n, prec_data->unnz,  prec_data->uia,  prec_data->uja,  prec_data->ua, vec_out,  prec_data->aux_vec2, &one, &zero);
     //aux_vec2 += aux_vec1;
     axpy(n, (1.0f), prec_data->aux_vec1, prec_data->aux_vec2);
     //vec_out = vec_in;
