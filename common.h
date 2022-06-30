@@ -5,6 +5,7 @@
 
 #define NOACC 0
 #define CUDA 1
+#define OPENMP 0
 typedef struct{
  
   int *lia;
