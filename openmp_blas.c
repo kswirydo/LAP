@@ -1,15 +1,6 @@
 #include "openmp_blas.h"
 #include <math.h>
 
-double openmp_dot (const int n, const double *v, const double *w){
-  double sum = 0.0;
-  int i;
-#pragma omp target teams distribute parallel for  schedule(static) private(i) map(to:v[0:n], w[0:n]) map(from:sum) reduction(+:sum)
-  for (i=0; i<n; ++i){
-    sum += v[i]*w[i];
-  }
-  return sum;
-}
 
 void openmp_scal (const int n, const double alpha, double *v){
 
@@ -61,7 +52,7 @@ void openmp_lower_triangular_solve(const int n, const int nnz, const int *lia, c
   ////we DO NOT assume anything about L diagonal
   //go through each row (starting from 0)
   int i, j, col;
-#pragma omp target teams distribute map(to:la[0:nnz], lja[0:nnz],la[0:n+1],x[0:n])  map(tofrom:result[0:n])
+#pragma omp target teams distribute map(to:la[0:nnz], lja[0:nnz],lia[0:n+1],x[0:n], diagonal[0:n])  map(tofrom:result[0:n])
   for (i=0; i<n; ++i){
     double s =0.0;
 #pragma omp simd private(j) reduction(+:s)
@@ -81,7 +72,7 @@ void openmp_upper_triangular_solve(const int n, const int nnz, const int *uia, c
   ////we DO NOT assume anything about L diagonal
   //go through each row (starting from the last row)
   int i,j,col; 
-#pragma omp target teams distribute map(to:ua[0:nnz], uja[0:nnz],ua[0:n+1],x[0:n])  map(tofrom:result[0:n])
+#pragma omp target teams distribute map(to:ua[0:nnz], uja[0:nnz],uia[0:n+1],x[0:n], diagonal[0:n])  map(tofrom:result[0:n])
   for (i=n-1; i>=0; --i){
     double s=0.0;
 
@@ -144,5 +135,14 @@ void openmp_vec_zero(const int n, double *vec){
   for (i=0; i<n; ++i){
     vec[i] = 0.0f;  
   }
+}
+double openmp_dot (const int n, const double *v, const double *w){
+  double sum = 0.0;
+  int i;
+#pragma omp target teams distribute parallel for  schedule(static) private(i) map(to:v[0:n], w[0:n]) map(from:sum) reduction(+:sum)
+  for (i=0; i<n; ++i){
+    sum += v[i]*w[i];
+  }
+  return sum;
 }
 //add vec_copy

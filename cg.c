@@ -1,5 +1,6 @@
 #include "common.h"
 #include "blas.h"
+#include "cudaMem.h"
 void cg(int n, double nnz,
         int *ia, //matrix csr data
         int *ja,
@@ -13,15 +14,31 @@ void cg(int n, double nnz,
         int *flag, //output: flag 0-converged, 1-maxit reached, 2-catastrophic failure
         double * res_norm_history //output: residual norm history
        ){
+#if CUDA
+double *r;
+double *w;
+double *p;
+double *q;
+
+ r = (double*) mallocForDevice(r, n, sizeof(double));
+  w = (double*)mallocForDevice(w, n, sizeof(double));
+  p = (double*)mallocForDevice(p, n, sizeof(double));
+  q = (double*)mallocForDevice(q, n, sizeof(double));
+#else
   double * r = (double *) calloc (n, sizeof(double));
   double * w = (double *) calloc (n, sizeof(double));
   double * p = (double *) calloc (n, sizeof(double));
   double * q = (double *) calloc (n, sizeof(double));
+#endif
   double alpha, beta, tolrel, rho_current, rho_previous, pTq;
-  int notconv =1, iter =0;
+double one = 1.0;
+double zero = 0.0;  
+int notconv =1, iter =0;
   //compute initial norm of r
   //r = A*x
-  csr_matvec(n, nnz, ia, ja, a, x, r);
+//printf("Norm of X %e norm of B %e \n", dot(n, x,x), dot(n, r, r));  
+csr_matvec(n, nnz, ia, ja, a, x, r, &one, &zero);
+//printf("Norm of A*X %e \n", dot(n, r,r));  
   //r = -b +r = Ax-b
   axpy(n, -1.0f, b, r);
   // r=(-1.0)*r
@@ -32,21 +49,28 @@ void cg(int n, double nnz,
   tolrel = tol*res_norm_history[0];
     printf("CG: it %d, res norm %5.5e \n",0, res_norm_history[0]);
   while (notconv){
+//printf("Norm of X before prec %e \n", dot(n, r,r));  
     prec_function(ia, ja, a, nnz, prec_data, r, w);
+//printf("Norm of X after prec %e \n", dot(n, w,w));  
     // rho_current = r'*w;
     rho_current = dot(n, r, w);
     if (iter == 0){
+//printf("before copy \n");
       vec_copy(n, w, p);
+//printf("after copy \n");
     }
     else{
       beta = rho_current/rho_previous;
     //  printf("scaling by beta = %5.5e, rho_current = %5.5e, rho_previous = %5.5e \n", beta, rho_current, rho_previous);
       // p = w+bet*p;
+//printf("before scal \n");
       scal(n, beta, p);
+//printf("before axpy \n");
       axpy(n, 1.0, w, p);
+//printf("after axpy\n");
     }
     //  q = As*p;
-    csr_matvec(n, nnz, ia, ja, a, p, q);
+    csr_matvec(n, nnz, ia, ja, a, p, q, &one, &zero);
     //  alpha = rho_current/(p'*q);
     pTq = dot(n, p, q);
     alpha = rho_current/pTq; 

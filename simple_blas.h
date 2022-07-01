@@ -1,7 +1,8 @@
 //prototypes
 //
 #include "common.h"
-
+#ifndef SIMPLEBLAS_H
+#define SIMPLEBLAS_H
 double simple_dot (const int n, const double *v, const double *w);
 
 void simple_scal (const int n, const double alpha, double *v);
@@ -23,3 +24,5 @@ void simple_vector_reciprocal(const int n, const double *v, double *res);
 void simple_vec_copy(const int n, const double *src, double *dest);
 
 void simple_vec_zero(const int n, double *vec);
+
+#endif

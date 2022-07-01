@@ -1,4 +1,4 @@
-
+#pragma once
 double dot (const int n, const double *v, const double *w);
 void axpy (const int n, const double alpha, double *x, double *y);
 void scal (const int n, const double alpha, double *v);

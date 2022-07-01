@@ -1,5 +1,7 @@
 
 #include "common.h"
+#ifndef CUDABLAS_H
+#define CUDABLAS_H
 double cuda_dot (const int n, const double *v, const double *w);
 
 void cuda_scal (const int n, const double alpha, double *v);
@@ -55,3 +57,5 @@ void initialize_L_and_U_descriptors(const int n,
                                   int *uia, 
                                   int *uja, 
                                   double *ua);
+
+#endif

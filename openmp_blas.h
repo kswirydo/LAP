@@ -1,9 +1,9 @@
 //prototypes
 //
 #include "common.h"
-#ifdef _OPENMP
 #include <omp.h>
-#endif
+//#ifndef OMPBLAS_H
+//#define OMPBLAS_H
 
 double openmp_dot (const int n, const double *v, const double *w);
 
@@ -26,3 +26,4 @@ void openmp_vector_reciprocal(const int n, const double *v, double *res);
 void openmp_vec_copy(const int n, const double *src, double *dest);
 
 void openmp_vec_zero(const int n, double *vec);
+//#endif

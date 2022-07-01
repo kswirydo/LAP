@@ -9,7 +9,7 @@ void GS_std(int *ia, int *ja, double *a, int nnzA,  pdata* prec_data, double *ve
   double zero = 0.0;  
   double minusone = -1.0;
   vec_zero(n, vec_out);
-printf("k = %d\n", k);
+//printf("k = %d\n", k);
   //backward sweep
   for (int i=0; i<k; ++i){
     //x = x + L \ ( b - As*x );
