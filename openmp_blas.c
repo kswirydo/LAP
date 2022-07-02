@@ -6,7 +6,7 @@ void openmp_scal (const int n, const double alpha, double *v){
 
   int i;
 
-#pragma omp target teams distribute parallel for  schedule(static) private(i) map(to:v[0:n], alpha) map(from:v[0:n])
+#pragma omp target teams distribute parallel for  schedule(static) private(i) map(alpha) map(tofrom:v[0:n])
   for (i=0; i<n; ++i){
     v[i] *= alpha;
   }
@@ -15,7 +15,7 @@ void openmp_scal (const int n, const double alpha, double *v){
 void openmp_axpy (const int n, const double alpha, const double *x, double *y){
   int i;
 
-#pragma omp target teams distribute parallel for  schedule(static) private(i) map(to:x[0:n], y[0:n]) map(from:y[0:n])
+#pragma omp target teams distribute parallel for  schedule(static) private(i) map(to:x[0:n]) map(tofrom:y[0:n])
   for (i=0; i<n;++i){
     y[i] += alpha*x[i];
   }
@@ -52,10 +52,10 @@ void openmp_lower_triangular_solve(const int n, const int nnz, const int *lia, c
   ////we DO NOT assume anything about L diagonal
   //go through each row (starting from 0)
   int i, j, col;
-#pragma omp target teams distribute map(to:la[0:nnz], lja[0:nnz],lia[0:n+1],x[0:n], diagonal[0:n])  map(tofrom:result[0:n])
+//#pragma omp target teams distribute map(to:lia[0:n+1],lja[0:nnz],la[0:nnz],x[0:n], diagonal[0:n])  map(tofrom:result[0:n])
   for (i=0; i<n; ++i){
     double s =0.0;
-#pragma omp simd private(j) reduction(+:s)
+//#pragma omp simd private(j, col) reduction(+:s)
     for ( j=lia[i]; j<lia[i+1]; ++j){
       col = lja[j];
 
@@ -71,17 +71,23 @@ void openmp_upper_triangular_solve(const int n, const int nnz, const int *uia, c
   //compute result = U^{-1}x 
   ////we DO NOT assume anything about L diagonal
   //go through each row (starting from the last row)
-  int i,j,col; 
-#pragma omp target teams distribute map(to:ua[0:nnz], uja[0:nnz],uia[0:n+1],x[0:n], diagonal[0:n])  map(tofrom:result[0:n])
+  int i,j,col;
+  double s; 
+ //this kind of works but the result is non deterministic 
+ #pragma omp target teams distribute ordered map(to:uia[0:n+1],uja[0:nnz],ua[0:nnz], x[0:n], diagonal[0:n]) map(tofrom:result[0:n]) 
+ // #pragma omp target map(to:uia[0:n+1],uja[0:nnz],ua[0:nnz], x[0:n], diagonal[0:n]) map(tofrom:result[0:n]) 
   for (i=n-1; i>=0; --i){
-    double s=0.0;
+    s=0.0;
 
-#pragma omp simd private(j) reduction(+:s)
+    result[i] = 0.0f;
+#pragma omp simd private(j, col) reduction(+:s)
+//map(to:uia[0:n+1],uja[0:nnz],ua[0:nnz],result[0:n]) map(from:s)
     for (j=uia[i]; j<uia[i+1]; ++j){
       col = uja[j];
       s += (-1.0)*ua[j]*result[col];
     }
-    result[i] =(s+x[i])/diagonal[i];
+    //#pragma omp ordered
+    result[i] =(s+x[i])/diagonal[i]; 
   }
 }
 
@@ -139,7 +145,7 @@ void openmp_vec_zero(const int n, double *vec){
 double openmp_dot (const int n, const double *v, const double *w){
   double sum = 0.0;
   int i;
-#pragma omp target teams distribute parallel for  schedule(static) private(i) map(to:v[0:n], w[0:n]) map(from:sum) reduction(+:sum)
+#pragma omp target teams distribute parallel for  schedule(static) private(i) map(to:v[0:n], w[0:n]) reduction(+:sum)
   for (i=0; i<n; ++i){
     sum += v[i]*w[i];
   }
