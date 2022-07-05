@@ -7,7 +7,7 @@ CUDA_LIBS := -lcusparse -lcublas
 NVCC_FLAGS := -arch=sm_80 -rdc=true 
 FLAGS := -O3 -g
 CFLAGS :=  -lgomp  
-FLAGS_OMP := -mp=gpu -gpu=cc80 -fopenmp
+FLAGS_OMP := -mp=gpu -gpu=cc80 -fopenmp  -Minfo=mp
 LIBS = -lm
 SRC = simple_blas.c blas.c GS.c it_jacobi.c line_jacobi.c prec.c cg.c cg_driver.c
 OBJS := $(foreach f,$(SRC),$(f:%.c=%.o))
