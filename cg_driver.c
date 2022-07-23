@@ -493,7 +493,7 @@ int main(int argc, char *argv[])
     d[i] = A->csr_ia[i+1]-A->csr_ia[i]-1; //dont count yourself
     //printf("d[%d] = %f \n", i, d[i]);
   }
-#if CUDA
+#if (CUDA || HIP)
   initialize_handles();
   double *d_aux;
   double *d_b;
