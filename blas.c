@@ -1,5 +1,7 @@
 #include "simple_blas.h"
 #include "cuda_blas.h"
+#include "hip_blas.h"
+
 extern "C" {
 #include "openmp_blas.h"
 }
@@ -13,6 +15,8 @@ double dot (const int n, const double *v, const double *w){
   d = cuda_dot (n,v,w);
 #elif OPENMP
   d = openmp_dot (n,v,w);
+#elif HIP
+  d = hip_dot (n,v,w);
 #endif
   return d;
 }
@@ -25,6 +29,8 @@ void axpy (const int n, const double alpha, double *x, double *y){
   cuda_axpy (n, alpha,x, y);
 #elif OPENMP
   openmp_axpy (n, alpha,x, y);
+#elif HIP
+  hip_axpy (n, alpha,x, y);
 #endif
 
 }
@@ -36,6 +42,8 @@ void scal (const int n, const double alpha, double *v){
   cuda_scal (n, alpha,v);
 #elif OPENMP
   openmp_scal (n, alpha,v);
+#elif HIP
+  hip_scal (n, alpha,v);
 #endif
 }
 
@@ -43,10 +51,11 @@ void csr_matvec(const int n, const int nnz, const int *ia, const int *ja, const 
 #if NOACC
   simple_csr_matvec(n, nnz, ia, ja, a, x, result, al, bet);
 #elif CUDA
-
   cuda_csr_matvec(n, nnz, ia, ja, a, x, result, al, bet);
 #elif OPENMP
   openmp_csr_matvec(n, nnz, ia, ja, a, x, result, al, bet);
+#elif HIP
+  hip_csr_matvec(n, nnz, ia, ja, a, x, result, al, bet);
 #endif
 }
 
@@ -57,6 +66,8 @@ void lower_triangular_solve(const int n, const int nnz, const int *lia, const in
   cuda_lower_triangular_solve(n, nnz, lia, lja, la, diag, x, result);
 #elif OPENMP
   openmp_lower_triangular_solve(n, nnz, lia, lja, la, diag, x, result);
+#elif HIP
+  hip_lower_triangular_solve(n, nnz, lia, lja, la, diag, x, result);
 #endif
 }
 
@@ -67,6 +78,8 @@ void upper_triangular_solve(const int n, const int nnz, const int *uia, const in
   cuda_upper_triangular_solve(n, nnz, uia, uja, ua,diag, x, result);
 #elif OPENMP
   openmp_upper_triangular_solve(n, nnz, uia, uja, ua,diag, x, result);
+#elif HIP
+  hip_upper_triangular_solve(n, nnz, uia, uja, ua,diag, x, result);
 #endif
 }
 
@@ -77,6 +90,8 @@ void vec_vec(const int n, const double * x, double * y, double *res){
   cuda_vec_vec(n, x, y, res);
 #elif OPENMP
   openmp_vec_vec(n, x, y, res);
+#elif HIP
+  hip_vec_vec(n, x, y, res);
 #endif
 }
 
@@ -88,6 +103,8 @@ void vector_reciprocal(const int n, const double *v, double *res){
   cuda_vector_reciprocal(n, v, res);
 #elif OPENMP
   openmp_vector_reciprocal(n, v, res);
+#elif HIP
+  hip_vector_reciprocal(n, v, res);
 #endif
 }
 
@@ -99,6 +116,8 @@ void vector_sqrt(const int n, const double *v, double *res){
   cuda_vector_sqrt(n, v, res);
 #elif OPENMP
   openmp_vector_sqrt(n, v, res);
+#elif HIP
+  hip_vector_sqrt(n, v, res);
 #endif
 }
 
@@ -110,6 +129,8 @@ void vec_copy(const int n, double *src, double *dest){
   cuda_vec_copy(n, src, dest);
 #elif OPENMP
   openmp_vec_copy(n, src, dest);
+#elif HIP
+  hip_vec_copy(n, src, dest);
 #endif
 }
 
@@ -120,5 +141,7 @@ void vec_zero(const int n, double *vec){
   cuda_vec_zero(n, vec);
 #elif OPENMP
   openmp_vec_zero(n, vec);
+#elif HIP
+  hip_vec_zero(n, vec);
 #endif
 }

@@ -14,7 +14,7 @@ void cg(int n, double nnz,
         int *flag, //output: flag 0-converged, 1-maxit reached, 2-catastrophic failure
         double * res_norm_history //output: residual norm history
        ){
-#if CUDA
+#if (CUDA || HIP)
 double *r;
 double *w;
 double *p;
@@ -38,7 +38,7 @@ int notconv =1, iter =0;
   //r = A*x
 //printf("Norm of X %e norm of B %e \n", dot(n, x,x), dot(n, r, r));  
 csr_matvec(n, nnz, ia, ja, a, x, r, &one, &zero);
-//printf("Norm of A*X %e \n", dot(n, r,r));  
+printf("Norm of A*X %e \n", dot(n, r,r));  
   //r = -b +r = Ax-b
   axpy(n, -1.0f, b, r);
   // r=(-1.0)*r
@@ -48,6 +48,7 @@ csr_matvec(n, nnz, ia, ja, a, x, r, &one, &zero);
   res_norm_history[0] = sqrt(res_norm_history[0]);
   tolrel = tol*res_norm_history[0];
     printf("CG: it %d, res norm %5.5e \n",0, res_norm_history[0]);
+#if 1
   while (notconv){
 //printf("Norm of X before prec %e \n", dot(n, r,r));  
     prec_function(ia, ja, a, nnz, prec_data, r, w);
@@ -99,5 +100,6 @@ csr_matvec(n, nnz, ia, ja, a, x, r, &one, &zero);
     }
     rho_previous = rho_current;
   }//while
+#endif
 }//cg
 

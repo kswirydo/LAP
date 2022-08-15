@@ -4,8 +4,9 @@
 #pragma once
 
 #define NOACC 0
-#define CUDA 1
+#define CUDA 0
 #define OPENMP 0
+#define HIP 1
 typedef struct{
  
   int *lia;

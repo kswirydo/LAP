@@ -12,15 +12,19 @@
 
 //Gauss-Seidel, classic version
 
-  double time_Symbolic = 0.0;
+double time_Symbolic = 0.0;
 #if CUDA
 #include "cuda_blas.h"
-#include "cudaMem.h"
+#include "devMem.h"
 #endif
 #if OPENMP
 #include "openmp_blas.h"
 #endif
 
+#if HIP
+#include "hip_blas.h"
+#include "devMem.h"
+#endif
 
 // needed for easy sorting
 struct indexPlusValue
@@ -378,7 +382,7 @@ int main(int argc, char *argv[])
   //for(int i=0; i<A->n; ++i) printf("b[%d] = %f\n", i, b[i]);
   prec_data = (pdata *)calloc(1, sizeof(pdata));
   prec_data->n = A->n;
-  prec_data->prec_op = "GS_std";
+  prec_data->prec_op = "GS_it";
   prec_data->k = 3;
   prec_data->m = 6;
 
@@ -392,7 +396,7 @@ int main(int argc, char *argv[])
   //now, if the preconditioner is GS_it or GS_it2, the setup is correct but if it is  
   //GS_std, we need to have the diagonal ADDED TO L AND U
   printf("preconditioner: %s L->nnz = %d L->nnz_unpacked = %d A->nnz %d A->nnz_unpacked %d\n", prec_data->prec_op, L->nnz, L->nnz_unpacked, A->nnz, A->nnz_unpacked);
-#if CUDA
+#if (CUDA || HIP)
   if (strcmp(prec_data->prec_op, "GS_std")  == 0) {
 
     int *  new_L_ja = (int *) calloc (L->nnz+L->n, sizeof(int));
@@ -488,11 +492,12 @@ int main(int argc, char *argv[])
   for (int i=0; i<A->n; ++i) {
     e[i]= 1.0f;
     b[i] = pow((-1.0),((i%2)));
-//printf("b[%d] = %f\n",i, b[i] );
+    //printf("b[%d] = %f\n",i, b[i] );
     //(double) (rand()%200)/(rand()%100);
     d[i] = A->csr_ia[i+1]-A->csr_ia[i]-1; //dont count yourself
     //printf("d[%d] = %f \n", i, d[i]);
   }
+
 #if (CUDA || HIP)
   initialize_handles();
   double *d_aux;
@@ -503,7 +508,6 @@ int main(int argc, char *argv[])
   d_aux = (double *) mallocForDevice (d_aux,A->n, sizeof(double));
   printf("is d_aux NULL? %d\n", d_aux == NULL);
 
-#if 1
 
   d_b = (double*) mallocForDevice (d_b,A->n, sizeof(double));
   d_d = (double*) mallocForDevice (d_d,A->n, sizeof(double));
@@ -511,7 +515,7 @@ int main(int argc, char *argv[])
   memcpyDevice(d_b, b,  A->n,sizeof(double) , "H2D");
   memcpyDevice(d_d, d,  A->n,sizeof(double) , "H2D");
   memcpyDevice(d_e, e,A->n,sizeof(double),  "H2D");
-printf("norm sq b before projection %16.16f \n", dot(A->n, d_b, d_b));
+  printf("norm sq b before projection %16.16f \n", dot(A->n, d_b, d_b));
   free(b);
   free(d);
   free(e);
@@ -520,9 +524,10 @@ printf("norm sq b before projection %16.16f \n", dot(A->n, d_b, d_b));
   b=d_b;
   e=d_e;
   d=d_d;
-#endif
   //create an rhs.
 #endif
+
+#if 1
 #if 1
   double norme = (double) sqrt(A->n);  
   double one_over_norme = 1./norme;
@@ -542,7 +547,7 @@ printf("norm sq b before projection %16.16f \n", dot(A->n, d_b, d_b));
     //cublasDaxpy(cublas_handle,A->n, &be,d_e, 1, d_b, 1);
     axpy(A->n, be, e, b); 
 
-printf("norm b after projection %16.16f \n", sqrt(dot(A->n, b, b)));
+    printf("norm b after projection %16.16f \n", sqrt(dot(A->n, b, b)));
   } else {
     //weighted version
     /* 
@@ -559,7 +564,7 @@ printf("norm b after projection %16.16f \n", sqrt(dot(A->n, b, b)));
     d_d,
     d_e,
     d_De);
-     */
+    */
     //aux = sqrt(d);`
     vector_sqrt(A->n, d, aux);
 
@@ -591,11 +596,10 @@ printf("norm b after projection %16.16f \n", sqrt(dot(A->n, b, b)));
 
   prec_data->lnnz = L->nnz;
   prec_data->unnz = U->nnz;
-#if CUDA
-
+#if (CUDA || HIP)
   prec_data->lia = (int*) mallocForDevice (prec_data->lia,(A->n+1), sizeof(int));
   prec_data->lja = (int*)  mallocForDevice (prec_data->lja,(L->nnz), sizeof(int));
-   prec_data->la = (double*) mallocForDevice (prec_data->la,(L->nnz), sizeof(double));
+  prec_data->la = (double*) mallocForDevice (prec_data->la,(L->nnz), sizeof(double));
 
   prec_data->uia = (int*)  mallocForDevice (prec_data->uia,(A->n+1), sizeof(int));
   prec_data->uja = (int*)  mallocForDevice (prec_data->uja,(U->nnz), sizeof(int));
@@ -609,26 +613,26 @@ printf("norm b after projection %16.16f \n", sqrt(dot(A->n, b, b)));
   memcpyDevice(prec_data->uia,U->csr_ia ,(A->n+1), sizeof(int),  "H2D");
   memcpyDevice(prec_data->uja,U->csr_ja , (U->nnz), sizeof(int),  "H2D");
   memcpyDevice(prec_data->ua,U->csr_vals , (U->nnz), sizeof(double),  "H2D");
-   prec_data->d_r = (double*) mallocForDevice (prec_data->d_r,(A->n), sizeof(double));
+  prec_data->d_r = (double*) mallocForDevice (prec_data->d_r,(A->n), sizeof(double));
   vector_reciprocal(A->n, d, prec_data->d_r);
 
-printf("norm of d %f norm of d_r %d \n", dot(A->n, d,d), dot(A->n, prec_data->d_r, prec_data->d_r));
+  printf("norm of d %f norm of d_r %d \n", dot(A->n, d,d), dot(A->n, prec_data->d_r, prec_data->d_r));
   prec_data->d=d;
 
-   prec_data->aux_vec1 = (double*) mallocForDevice (prec_data->aux_vec1,(A->n), sizeof(double));
+  prec_data->aux_vec1 = (double*) mallocForDevice (prec_data->aux_vec1,(A->n), sizeof(double));
   prec_data->aux_vec2 = (double*)  mallocForDevice (prec_data->aux_vec2,(A->n), sizeof(double));
   prec_data->aux_vec3 = (double*)  mallocForDevice (prec_data->aux_vec3,(A->n), sizeof(double));
 
   double * x;
-x = (double *)  mallocForDevice (x,(A->n), sizeof(double));
+  x = (double *)  mallocForDevice (x,(A->n), sizeof(double));
   vec_zero(A->n, x);  
   int *d_A_ia;
   int *d_A_ja;
   double * d_A_a;
 
- d_A_ia = (int *)  mallocForDevice ((d_A_ia),(A->n+1), sizeof(int));
- d_A_ja = (int *)  mallocForDevice ((d_A_ja),(A->nnz_unpacked), sizeof(int));
- d_A_a = (double *)  mallocForDevice ((d_A_a),(A->nnz_unpacked), sizeof(double));
+  d_A_ia = (int *)  mallocForDevice ((d_A_ia),(A->n+1), sizeof(int));
+  d_A_ja = (int *)  mallocForDevice ((d_A_ja),(A->nnz_unpacked), sizeof(int));
+  d_A_a = (double *)  mallocForDevice ((d_A_a),(A->nnz_unpacked), sizeof(double));
   memcpyDevice(d_A_ia,A->csr_ia , sizeof(int) , (A->n+1), "H2D");
   memcpyDevice(d_A_ja,A->csr_ja , sizeof(int) , (A->nnz_unpacked), "H2D");
   memcpyDevice(d_A_a ,A->csr_vals , sizeof(double) , (A->nnz_unpacked), "H2D");
@@ -652,6 +656,7 @@ x = (double *)  mallocForDevice (x,(A->n), sizeof(double));
   A->csr_vals = d_A_a;
 
   double one =1.0; double minusone=1.0;
+#if CUDA 
   initialize_spmv_buffer(A->n, 
                          A->nnz_unpacked,
                          A->csr_ia,
@@ -661,7 +666,44 @@ x = (double *)  mallocForDevice (x,(A->n), sizeof(double));
                          b, 
                          &one, 
                          &minusone);
+#else // HIP
+printf("ia null? %d ja null? %d a NULL? %d, nnz_unpacked %d \n",
+A->csr_ia == NULL,
+A->csr_ja == NULL,
+A->csr_vals == NULL,
+A->nnz_unpacked
+);
+  analyze_spmv(A->n, 
+               A->nnz_unpacked, 
+               A->csr_ia,
+               A->csr_ja,
+               A->csr_vals,
+               x,
+               b, 
+               "A"
+              );
+  if ((strcmp(prec_data->prec_op, "GS_it")  == 0) || (strcmp(prec_data->prec_op, "GS_it2")  == 0) ) {
+    analyze_spmv(A->n, 
+                 prec_data->lnnz,
+                 prec_data->lia,
+                 prec_data->lja,
+                 prec_data->la,
+                 x,
+                 b, 
+                 "L"
+                );
 
+    analyze_spmv(A->n, 
+                 prec_data->unnz,
+                 prec_data->uia,
+                 prec_data->uja,
+                 prec_data->ua,
+                 x,
+                 b, 
+                 "U"
+                );
+  }
+#endif
   if (strcmp(prec_data->prec_op, "GS_std")  == 0) {
     initialize_and_analyze_L_and_U_solve(A->n, 
                                          prec_data->lnnz,
@@ -675,7 +717,7 @@ x = (double *)  mallocForDevice (x,(A->n), sizeof(double));
 
   }
 
-#if 1
+#if CUDA
   initialize_L_and_U_descriptors(A->n, 
                                  prec_data->lnnz,
                                  prec_data->lia,
@@ -687,7 +729,8 @@ x = (double *)  mallocForDevice (x,(A->n), sizeof(double));
                                  prec_data->ua);
 
 #endif
-#else 
+#else //NOT cuda nor hip
+
   prec_data->lia = L->csr_ia;
   prec_data->lja = L->csr_ja;
   prec_data->la = L->csr_vals;
@@ -717,7 +760,7 @@ x = (double *)  mallocForDevice (x,(A->n), sizeof(double));
   int it, flag;
 #if 1
   printf("A->nnz = %d \n", A->nnz_unpacked);
-      gettimeofday(&t1, 0);
+  gettimeofday(&t1, 0);
   cg(A->n,
      A->nnz_unpacked,
      A->csr_ia, //matrix csr data
@@ -732,10 +775,11 @@ x = (double *)  mallocForDevice (x,(A->n), sizeof(double));
      &flag, //output: flag 0-converged, 1-maxit reached, 2-catastrophic failure
      res_hist //output: residual norm history
     );
-      gettimeofday(&t2, 0);
-      time_CG = (1000000.0 * (t2.tv_sec - t1.tv_sec) + t2.tv_usec - t1.tv_usec) / 1000.0;
+  gettimeofday(&t2, 0);
+  time_CG = (1000000.0 * (t2.tv_sec - t1.tv_sec) + t2.tv_usec - t1.tv_usec) / 1000.0;
 #endif
   printf("cg done, it: %d it took %f s\n", it, time_CG/1000.0);
+#endif
 #endif
   return 0;
 }
