@@ -79,7 +79,7 @@ void read_mm_file(const char *matrixFileName, mmatrix *A)
 
   //first line is size and nnz, need this info to allocate memory
   sscanf(lineBuffer, "%ld %ld %ld", &(A->n), &(A->m), &(A->nnz));
-  printf("Matrix size: %d x %d, nnz %d \n",A->n, A->m, A->nnz );
+  //printf("Matrix size: %d x %d, nnz %d \n",A->n, A->m, A->nnz );
   //allocate
 
   A->coo_vals = (double *)calloc(A->nnz+A->n, sizeof(double));
@@ -175,7 +175,7 @@ void coo_to_csr(mmatrix *A)
       start = A->csr_ia[r];
 
       if ((start + nnz_shifts[r]) > A->nnz_unpacked)
-        printf("index out of boubns 2\n");
+      printf("index out of boubns 2\n");
       tmp[start + nnz_shifts[r]].idx = A->coo_rows[i];
       tmp[start + nnz_shifts[r]].value = A->coo_vals[i];
       nnz_shifts[r]++;
@@ -337,7 +337,7 @@ void create_L_and_split(mmatrix *A, mmatrix *L, mmatrix *U,mmatrix *D, int weigh
   for (int i=0; i<L->n; i++){
     printf("this is row %d with %d = %d - %d entries \n", i, L->csr_ia[i+1]-L->csr_ia[i], L->csr_ia[i+1], L->csr_ia[i]);
     for (int j=L->csr_ia[i]; j<L->csr_ia[i+1]; ++j){ 
-      printf("  %d,  ", L->csr_ja[j] );			
+      printf(" (%d,%f)  ", L->csr_ja[j], L->csr_vals[j] );			
 
     }
     printf("\n");
@@ -347,8 +347,8 @@ void create_L_and_split(mmatrix *A, mmatrix *L, mmatrix *U,mmatrix *D, int weigh
   for (int i=0; i<U->n; i++){
     printf("this is row %d \n", i);
     for (int j=U->csr_ia[i]; j<U->csr_ia[i+1]; ++j){ 
-      printf("  %d,  ", U->csr_ja[j] );			
 
+      printf(" (%d,%f)  ", U->csr_ja[j], U->csr_vals[j] );			
     }
     printf("\n");
 
@@ -362,8 +362,11 @@ int main(int argc, char *argv[])
   double time_CG = 0.0;
   struct timeval t1, t2;
   srand(12345);
-  char const *const matrixFileName = argv[1];
-  mmatrix *A, *L, *U, *D;
+  const char * matrixFileName = argv[1];
+  const char * precName = argv[2];
+  double cg_tol = atof(argv[3]);
+  int cg_maxit = atoi(argv[4]);
+	mmatrix *A, *L, *U, *D;
 
   A = (mmatrix *)calloc(1, sizeof(mmatrix));
   L = (mmatrix *)calloc(1, sizeof(mmatrix));
@@ -372,7 +375,7 @@ int main(int argc, char *argv[])
   read_mm_file(matrixFileName, A);
   coo_to_csr(A); 
 
-  int weighted = 0;
+  int weighted = 1;
   create_L_and_split(A,L,U,D, weighted);
   //at this point we know our LAPLACIAN !
   //NOTE: Laplacian is stored in A= L+U+D (matrix splitting).
@@ -382,7 +385,7 @@ int main(int argc, char *argv[])
   //for(int i=0; i<A->n; ++i) printf("b[%d] = %f\n", i, b[i]);
   prec_data = (pdata *)calloc(1, sizeof(pdata));
   prec_data->n = A->n;
-  prec_data->prec_op = "GS_it";
+  prec_data->prec_op = (char *) precName;
   prec_data->k = 3;
   prec_data->m = 6;
 
@@ -395,7 +398,15 @@ int main(int argc, char *argv[])
   d_A->nnz_unpacked = A->nnz_unpacked;
   //now, if the preconditioner is GS_it or GS_it2, the setup is correct but if it is  
   //GS_std, we need to have the diagonal ADDED TO L AND U
-  printf("preconditioner: %s L->nnz = %d L->nnz_unpacked = %d A->nnz %d A->nnz_unpacked %d\n", prec_data->prec_op, L->nnz, L->nnz_unpacked, A->nnz, A->nnz_unpacked);
+printf("\n\n");
+	printf("Solving graph Laplacian linear system for %s\n", matrixFileName);
+	printf("\t Matrix size   : %d x %d \n", A->n, A->n);
+	printf("\t Matrix nnz    : %d  \n", A->nnz);
+	printf("\t Preconditioner: %s\n", prec_data->prec_op);
+	printf("\t CG tolerance  : %2.16g\n", cg_tol);
+	printf("\t CG maxit      : %d \n\n\n", cg_maxit);
+
+//	printf("preconditioner: %s L->nnz = %d L->nnz_unpacked = %d A->nnz %d A->nnz_unpacked %d\n", prec_data->prec_op, L->nnz, L->nnz_unpacked, A->nnz, A->nnz_unpacked);
 #if (CUDA || HIP)
   if (strcmp(prec_data->prec_op, "GS_std")  == 0) {
 
@@ -494,9 +505,10 @@ int main(int argc, char *argv[])
     b[i] = pow((-1.0),((i%2)));
     //printf("b[%d] = %f\n",i, b[i] );
     //(double) (rand()%200)/(rand()%100);
-    d[i] = A->csr_ia[i+1]-A->csr_ia[i]-1; //dont count yourself
-    //printf("d[%d] = %f \n", i, d[i]);
-  }
+   d[i] = A->csr_ia[i+1]-A->csr_ia[i]-1; //dont count yourself
+		// printf("d[%d] = %f \n", i, d[i]);
+ 
+ 	}
 
 #if (CUDA || HIP)
   initialize_handles();
@@ -506,7 +518,6 @@ int main(int argc, char *argv[])
   double *d_e;
 
   d_aux = (double *) mallocForDevice (d_aux,A->n, sizeof(double));
-  printf("is d_aux NULL? %d\n", d_aux == NULL);
 
 
   d_b = (double*) mallocForDevice (d_b,A->n, sizeof(double));
@@ -515,7 +526,7 @@ int main(int argc, char *argv[])
   memcpyDevice(d_b, b,  A->n,sizeof(double) , "H2D");
   memcpyDevice(d_d, d,  A->n,sizeof(double) , "H2D");
   memcpyDevice(d_e, e,A->n,sizeof(double),  "H2D");
-  printf("norm sq b before projection %16.16f \n", dot(A->n, d_b, d_b));
+  //printf("norm sq b before projection %16.16f \n", dot(A->n, d_b, d_b));
   free(b);
   free(d);
   free(e);
@@ -531,40 +542,22 @@ int main(int argc, char *argv[])
 #if 1
   double norme = (double) sqrt(A->n);  
   double one_over_norme = 1./norme;
-  printf ("scaling e by %16.16f, norme %16.16e \n", one_over_norme, norme);
+  //printf ("scaling e by %16.16f, norme %16.16e \n", one_over_norme, norme);
   if (weighted == 0){
     //non-weighted version
     double be;
     /* e = (1/norme) e;*/
     scal(A->n, one_over_norme, e);  
-    //  cublasDscal(cublas_handle, A->n, &one_over_norme, d_e,1);
     /* be = b'*e*/
-    //   cublasDdot (cublas_handle,A->n,d_e, 1, d_b,1, &be);
     be = dot(A->n, e, b);
-    printf("dot product is %16.16f \n", be);
+    //printf("dot product is %16.16f \n", be);
     /*b = b-be*e; */
     be = (-1.0f) * be;
-    //cublasDaxpy(cublas_handle,A->n, &be,d_e, 1, d_b, 1);
     axpy(A->n, be, e, b); 
 
-    printf("norm b after projection %16.16f \n", sqrt(dot(A->n, b, b)));
+    //printf("norm b after projection %16.16f \n", sqrt(dot(A->n, b, b)));
   } else {
     //weighted version
-    /* 
-       double *d_De;
-       double *d_D_csr_a; 
-       int * d_D_csr_ia, *d_D_csr_ja;
-
-       mallocForDevice(&d_De, A->n * sizeof(double));
-
-
-       mallocForDevice(&d_D_csr_a, A->n * sizeof(double));
-    //d_De = sqrt(D)*e
-    squareofDTimesX<<<A->n/1024+1, 1024>>>(A->n,
-    d_d,
-    d_e,
-    d_De);
-    */
     //aux = sqrt(d);`
     vector_sqrt(A->n, d, aux);
 
@@ -573,22 +566,18 @@ int main(int argc, char *argv[])
     //De_norm = norm(D_De);
     double De_norm;
 
-    //    cublasDdot (cublas_handle,A->n,d_De, 1, d_De,1, &De_norm);
     De_norm = dot(A->n, aux, aux);  
     De_norm = 1.0/sqrt(De_norm);
     //De = (1/norm(De))*De;
 
-    //  cublasDscal(cublas_handle, A->n, &De_norm, d_De,1);
     scal(A->n, De_norm, aux);
 
     //   bwe = b'*De;
     double bwe;
 
-    //  cublasDdot (cublas_handle,A->n,d_De, 1, d_b,1, &bwe);
     bwe = dot(A->n, b, aux);  
     //bProjw = b- bwe*wetilde;
     bwe *= (-1.0f);
-    //    cublasDaxpy(cublas_handle,A->n, &bwe,d_De, 1, d_b, 1);
     axpy(A->n,bwe, aux, b);
   }
   // at this point the Laplacian and the rhs are created.
@@ -614,9 +603,20 @@ int main(int argc, char *argv[])
   memcpyDevice(prec_data->uja,U->csr_ja , (U->nnz), sizeof(int),  "H2D");
   memcpyDevice(prec_data->ua,U->csr_vals , (U->nnz), sizeof(double),  "H2D");
   prec_data->d_r = (double*) mallocForDevice (prec_data->d_r,(A->n), sizeof(double));
-  vector_reciprocal(A->n, d, prec_data->d_r);
-
-  printf("norm of d %f norm of d_r %d \n", dot(A->n, d,d), dot(A->n, prec_data->d_r, prec_data->d_r));
+ if (!weighted){
+	
+	vector_reciprocal(A->n, d, prec_data->d_r);
+ } else {
+ 
+  double *dd = (double *) calloc (A->n, sizeof(double));
+ for (int ii=0; ii<A->n; ++ii){
+ dd[ii]=1.0;
+ }
+ 
+  memcpyDevice(prec_data->d_r,dd , (A->n), sizeof(double),  "H2D");
+	free(dd);
+ }
+  //printf("norm of d %f norm of d_r %d \n", dot(A->n, d,d), dot(A->n, prec_data->d_r, prec_data->d_r));
   prec_data->d=d;
 
   prec_data->aux_vec1 = (double*) mallocForDevice (prec_data->aux_vec1,(A->n), sizeof(double));
@@ -639,15 +639,15 @@ int main(int argc, char *argv[])
 #if 0
   for (int i=0; i<A->n; i++){
     printf("this is row %d \n", i);
-    for (int j=A->csr_ia[i]; j<A->csr_ia[i+1]; ++j){ 
-      printf(" (%d, %f) ", A->csr_ja[j], A->csr_vals[j] );			
+    for (int j=L->csr_ia[i]; j<L->csr_ia[i+1]; ++j){ 
+      printf(" (%d, %f) ", L->csr_ja[j], L->csr_vals[j] );			
 
     }
     printf("\n");
 
   }
 #endif
-  printf("last el of csr_ia: %d\n", A->csr_ia[A->n]);
+  //printf("last el of csr_ia: %d\n", A->csr_ia[A->n]);
   free(A->csr_ia);
   free(A->csr_ja);
   free(A->csr_vals);
@@ -658,75 +658,75 @@ int main(int argc, char *argv[])
   double one =1.0; double minusone=1.0;
 #if CUDA 
   initialize_spmv_buffer(A->n, 
-                         A->nnz_unpacked,
-                         A->csr_ia,
-                         A->csr_ja,
-                         A->csr_vals,
-                         x,
-                         b, 
-                         &one, 
-                         &minusone);
+      A->nnz_unpacked,
+      A->csr_ia,
+      A->csr_ja,
+      A->csr_vals,
+      x,
+      b, 
+      &one, 
+      &minusone);
 #else // HIP
-printf("ia null? %d ja null? %d a NULL? %d, nnz_unpacked %d \n",
-A->csr_ia == NULL,
-A->csr_ja == NULL,
-A->csr_vals == NULL,
-A->nnz_unpacked
-);
+  /*printf("ia null? %d ja null? %d a NULL? %d, nnz_unpacked %d \n",
+      A->csr_ia == NULL,
+      A->csr_ja == NULL,
+      A->csr_vals == NULL,
+      A->nnz_unpacked
+      );*/
   analyze_spmv(A->n, 
-               A->nnz_unpacked, 
-               A->csr_ia,
-               A->csr_ja,
-               A->csr_vals,
-               x,
-               b, 
-               "A"
-              );
+      A->nnz_unpacked, 
+      A->csr_ia,
+      A->csr_ja,
+      A->csr_vals,
+      x,
+      b, 
+      "A"
+      );
   if ((strcmp(prec_data->prec_op, "GS_it")  == 0) || (strcmp(prec_data->prec_op, "GS_it2")  == 0) ) {
-    analyze_spmv(A->n, 
-                 prec_data->lnnz,
-                 prec_data->lia,
-                 prec_data->lja,
-                 prec_data->la,
-                 x,
-                 b, 
-                 "L"
-                );
+					analyze_spmv(A->n, 
+        prec_data->lnnz,
+        prec_data->lia,
+        prec_data->lja,
+        prec_data->la,
+        x,
+        b, 
+        "L"
+        );
 
     analyze_spmv(A->n, 
-                 prec_data->unnz,
-                 prec_data->uia,
-                 prec_data->uja,
-                 prec_data->ua,
-                 x,
-                 b, 
-                 "U"
-                );
+        prec_data->unnz,
+        prec_data->uia,
+        prec_data->uja,
+        prec_data->ua,
+        x,
+        b, 
+        "U"
+        );
   }
 #endif
   if (strcmp(prec_data->prec_op, "GS_std")  == 0) {
     initialize_and_analyze_L_and_U_solve(A->n, 
-                                         prec_data->lnnz,
-                                         prec_data->lia,
-                                         prec_data->lja,
-                                         prec_data->la,
-                                         prec_data->unnz,
-                                         prec_data->uia,
-                                         prec_data->uja,
-                                         prec_data->ua);
+        prec_data->lnnz,
+        prec_data->lia,
+        prec_data->lja,
+        prec_data->la,
+        prec_data->unnz,
+        prec_data->uia,
+        prec_data->uja,
+        prec_data->ua);
 
   }
 
 #if CUDA
   initialize_L_and_U_descriptors(A->n, 
-                                 prec_data->lnnz,
-                                 prec_data->lia,
-                                 prec_data->lja,
-                                 prec_data->la,
-                                 prec_data->unnz,
-                                 prec_data->uia,
-                                 prec_data->uja,
-                                 prec_data->ua);
+      prec_data->lnnz,
+      prec_data->lia,
+      prec_data->lja,
+      prec_data->la,
+      prec_data->unnz,
+      prec_data->uia,
+      prec_data->uja,
+      prec_data->ua);
 
 #endif
 #else //NOT cuda nor hip
@@ -756,29 +756,45 @@ A->nnz_unpacked
   prec_data->aux_vec3 = aux_vec3;
 #endif
 
-  double *res_hist = (double *) calloc (1002, sizeof(double));
+  double *res_hist = (double *) calloc (2500, sizeof(double));
   int it, flag;
 #if 1
-  printf("A->nnz = %d \n", A->nnz_unpacked);
+  //printf("A->nnz = %d \n", A->nnz_unpacked);
   gettimeofday(&t1, 0);
   cg(A->n,
-     A->nnz_unpacked,
-     A->csr_ia, //matrix csr data
-     A->csr_ja,
-     A->csr_vals,
-     x, //solution vector, mmust be alocated prior to calling
-     b, //rhs
-     1e-12, //DONT MULTIPLY BY NORM OF B
-     prec_data, //preconditioner data: all Ls, Us etc
-     2500,
-     &it, //output: iteration
-     &flag, //output: flag 0-converged, 1-maxit reached, 2-catastrophic failure
-     res_hist //output: residual norm history
+      A->nnz_unpacked,
+      A->csr_ia, //matrix csr data
+      A->csr_ja,
+      A->csr_vals,
+      x, //solution vector, mmust be alocated prior to calling
+      b, //rhs
+      cg_tol, //DONT MULTIPLY BY NORM OF B
+      prec_data, //preconditioner data: all Ls, Us etc
+      cg_maxit,
+      &it, //output: iteration
+      &flag, //output: flag 0-converged, 1-maxit reached, 2-catastrophic failure
+      res_hist //output: residual norm history
     );
   gettimeofday(&t2, 0);
   time_CG = (1000000.0 * (t2.tv_sec - t1.tv_sec) + t2.tv_usec - t1.tv_usec) / 1000.0;
 #endif
-  printf("cg done, it: %d it took %f s\n", it, time_CG/1000.0);
+printf("\n\n");
+  printf("CG summary results \n");
+	printf("\t Iters              : %d  \n", it);
+	printf("\t Time               : %2.4f  \n", time_CG/1000.0);
+	printf("\t Res. norm          : %2.16g  \n", res_hist[it]);
+if (flag == 0){
+	printf("\t Reason for exiting : CG converged  \n");
+} else {
+if (flag == 1){
+
+	printf("\t Reason for exiting : CG reached maxit \n");
+} else {
+
+	printf("\t Reason for exiting : CG failed\n");
+}
+}
+ // printf("cg done, it: %d it took %f s FLAG %d\n", it, time_CG/1000.0, flag);
 #endif
 #endif
   return 0;

@@ -84,7 +84,7 @@ if (strcmp(option, "U") == 0)
                                                ja,
                                                infoU);
 
-  printf("mv analysis status for %s is %d \n", option, status_rocsparse);
+  if (status_rocsparse!=0)printf("mv analysis status for %s is %d \n", option, status_rocsparse);
 
 }
 
@@ -111,7 +111,7 @@ void initialize_and_analyze_L_and_U_solve(const int n,
                                lja,
                                infoL, 
                                &L_buffer_size);
-printf("buffer size for L %d status %d \n", L_buffer_size, status_rocsparse);
+//printf("buffer size for L %d status %d \n", L_buffer_size, status_rocsparse);
   hipMalloc((void**)&(L_buffer), L_buffer_size);
 
  status_rocsparse = rocsparse_dcsrsv_buffer_size(handle_rocsparse, 
@@ -125,7 +125,7 @@ printf("buffer size for L %d status %d \n", L_buffer_size, status_rocsparse);
                                infoU, 
                                &U_buffer_size);
   hipMalloc((void**)&(U_buffer), U_buffer_size);
-printf("buffer size for U %d status %d \n", U_buffer_size, status_rocsparse);
+//printf("buffer size for U %d status %d \n", U_buffer_size, status_rocsparse);
   status_rocsparse = rocsparse_dcsrsv_analysis(handle_rocsparse, 
                                                rocsparse_operation_none,
                                                n,
@@ -138,7 +138,7 @@ printf("buffer size for U %d status %d \n", U_buffer_size, status_rocsparse);
                                                rocsparse_analysis_policy_reuse,
                                                rocsparse_solve_policy_auto,
                                                L_buffer);
-printf("status after analysis 1 %d \n", status_rocsparse);
+  if (status_rocsparse!=0)printf("status after analysis 1 %d \n", status_rocsparse);
   status_rocsparse = rocsparse_dcsrsv_analysis(handle_rocsparse, 
                                                rocsparse_operation_none, 
                                                n,
@@ -151,7 +151,7 @@ printf("status after analysis 1 %d \n", status_rocsparse);
                                                rocsparse_analysis_policy_reuse,
                                                rocsparse_solve_policy_auto,
                                                U_buffer);
-printf("status after analysis 2 %d \n", status_rocsparse);
+  if (status_rocsparse!=0)printf("status after analysis 2 %d \n", status_rocsparse);
 }
 
 
@@ -238,9 +238,10 @@ void hip_axpy (const int n, const double alpha, const double *x, double *y){
 
 }
 
-void hip_csr_matvec(const int n, const int nnz, const int *ia, const int *ja, const double *a, const double *x, double *result, const double*al, const double *bet){
+void hip_csr_matvec(const int n, const int nnz, const int *ia, const int *ja, const double *a, const double *x, double *result, const double*al, const double *bet, const char * kind){
   // y = alpha *A* x + beta *y 
 rocsparse_status st;
+if (strcmp(kind, "A") == 0)
   st= rocsparse_dcsrmv(handle_rocsparse,
                    rocsparse_operation_none,
                    n,
@@ -252,6 +253,36 @@ rocsparse_status st;
                    ia,
                    ja,
                    infoA,
+                   x,
+                   bet,
+                   result);
+if (strcmp(kind, "L") == 0)
+  st= rocsparse_dcsrmv(handle_rocsparse,
+                   rocsparse_operation_none,
+                   n,
+                   n,
+                   nnz,
+                   al,
+                   descrL,
+                   a,
+                   ia,
+                   ja,
+                   infoL,
+                   x,
+                   bet,
+                   result);
+if (strcmp(kind, "U") == 0)
+  st= rocsparse_dcsrmv(handle_rocsparse,
+                   rocsparse_operation_none,
+                   n,
+                   n,
+                   nnz,
+                   al,
+                   descrU,
+                   a,
+                   ia,
+                   ja,
+                   infoU,
                    x,
                    bet,
                    result);

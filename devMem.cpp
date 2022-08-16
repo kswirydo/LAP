@@ -42,3 +42,12 @@ void memcpyDevice (void * dest, void * src, int n, int size, char * type){
     #endif
   }
 }
+
+void freeDevice(void * p){
+
+    #if CUDA
+    cudaFree(p);
+    #elif HIP
+    hipFree(p);
+    #endif
+}
