@@ -34,7 +34,7 @@ void hip_scal (const int n, const double alpha, double *v);
 
 void hip_axpy (const int n, const double alpha, const double *x, double *y);
 
-void hip_csr_matvec(const int n, const int nnz, const int *ia, const int *ja, const double *a, const double *x, double *result, const double*al, const double *bet);
+void hip_csr_matvec(const int n, const int nnz, const int *ia, const int *ja, const double *a, const double *x, double *result, const double*al, const double *bet, const char * kind);
 
 void hip_lower_triangular_solve(const int n, const int nnzL, const int *lia, const int *lja, const double *la,const double *diagonal, const double *x, double *result);
 

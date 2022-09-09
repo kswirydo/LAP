@@ -9,8 +9,8 @@ FLAGS := -O3 -g
 CFLAGS :=  -lgomp  
 FLAGS_OMP := -mp=gpu -gpu=cc80 -fopenmp  -Minfo=mp
 FLAGS_HIP := -D__HIP_PLATFORM_HCC__
-LIBS_HIP := -L/opt/rocm-4.5.1/rocsparse/lib -lrocsparse -L/opt/rocm-4.5.1/rocblas/lib -lrocblas 
-INCLUDES_HIP := -I/opt/rocm-4.5.1/include 
+LIBS_HIP := -L/opt/rocm-4.5.1/lib -lrocsparse -L/opt/rocm-4.5.2/lib -lrocblas 
+INCLUDES_HIP := -I/opt/rocm-4.5.2/include 
 LIBS = -lm
 SRC = simple_blas.c blas.c GS.c it_jacobi.c line_jacobi.c prec.c cg.c cg_driver.c
 OBJS := $(foreach f,$(SRC),$(f:%.c=%.o))

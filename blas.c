@@ -47,7 +47,7 @@ void scal (const int n, const double alpha, double *v){
 #endif
 }
 
-void csr_matvec(const int n, const int nnz, const int *ia, const int *ja, const double *a, const double *x, double *result, const double *al, const double *bet){
+void csr_matvec(const int n, const int nnz, const int *ia, const int *ja, const double *a, const double *x, double *result, const double *al, const double *bet,const char * kind){
 #if NOACC
   simple_csr_matvec(n, nnz, ia, ja, a, x, result, al, bet);
 #elif CUDA
@@ -55,7 +55,7 @@ void csr_matvec(const int n, const int nnz, const int *ia, const int *ja, const 
 #elif OPENMP
   openmp_csr_matvec(n, nnz, ia, ja, a, x, result, al, bet);
 #elif HIP
-  hip_csr_matvec(n, nnz, ia, ja, a, x, result, al, bet);
+  hip_csr_matvec(n, nnz, ia, ja, a, x, result, al, bet, kind);
 #endif
 }
 
