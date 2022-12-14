@@ -36,7 +36,7 @@ void cg(int n, double nnz,
 	int notconv =1, iter =0;
 	//compute initial norm of r
 	//r = A*x
-	//printf("Norm of X %e norm of B %e \n", dot(n, x,x), dot(n, r, r));  
+	//printf("Norm of X %e norm of B %e \n", dot(n, x,x), dot(n, b, b));  
 	csr_matvec(n, nnz, ia, ja, a, x, r, &one, &zero, "A");
 	//printf("Norm of A*X %e \n", dot(n, r,r));  
 	//r = -b +r = Ax-b

@@ -68,7 +68,7 @@ void GS_it(int *ia, int *ja, double *a,int nnzA, pdata* prec_data, double *vec_i
     //r = aux_vec2 = aux_vec1*(-1) +vec_in
     // y = aux_vec1 = D^{-1}aux_vec2
     vec_vec(n, prec_data->aux_vec2, prec_data->d_r, prec_data->aux_vec1); 
-//    printf("res nrm after scaling %f \n", dot(n,  prec_data->aux_vec1,  prec_data->aux_vec1));  
+    //printf("res nrm after scaling %f \n", dot(n,  prec_data->aux_vec1,  prec_data->aux_vec1));  
     for (int i=0; i<k; ++i){
       //y = v.*(r-L*y);
       //vec3 = L*vec1    
@@ -76,7 +76,7 @@ void GS_it(int *ia, int *ja, double *a,int nnzA, pdata* prec_data, double *vec_i
       csr_matvec(n, prec_data->lnnz,prec_data->lia,prec_data->lja,  prec_data->la, prec_data->aux_vec1, prec_data->aux_vec3, &minusone, &one, "L");
       //axpy
 
-  //    printf("\t res nrm inside first loop, after mv  %f \n", dot(n,   prec_data->aux_vec3,  prec_data->aux_vec3));  
+     // printf("\t res nrm inside first loop, after mv  %f \n", dot(n,   prec_data->aux_vec3,  prec_data->aux_vec3));  
       vec_vec(n, prec_data->aux_vec3, prec_data->d_r, prec_data->aux_vec1); 
     }
 
@@ -92,7 +92,7 @@ void GS_it(int *ia, int *ja, double *a,int nnzA, pdata* prec_data, double *vec_i
     //printf("res nrm after second %f \n", dot(n,  prec_data->aux_vec1,  prec_data->aux_vec1));  
     //vec_out = vec_out + vec1  
     axpy(n, 1.0f, prec_data->aux_vec1, vec_out);
-    //printf("res nrm after update  %f \n", dot(n,  vec_out, vec_out));  
+ //   printf("res nrm after update  %f \n", dot(n,  vec_out, vec_out));  
   }
 }
 //iterative GS v2

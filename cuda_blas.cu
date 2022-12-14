@@ -4,7 +4,7 @@
 #include "cuda_blas.h"
 static cublasHandle_t handle_cublas;
 static cusparseHandle_t handle_cusparse;
-static void * mv_buffer = NULL;
+static void * mv_buffer;
 static void * L_buffer;
 static void * U_buffer;
 
@@ -17,6 +17,7 @@ static  csrsv2Info_t infoL, infoU;
 
 
 void initialize_handles(){
+//printf("initializing handles! \n");
   cublasCreate(&handle_cublas);
   cusparseCreate(&handle_cusparse);
 }
@@ -32,16 +33,20 @@ void initialize_spmv_buffer(const int n,
   cusparseDnVecDescr_t vecX;
   cusparseDnVecDescr_t vecY;
   size_t mv_buffer_size;
+  cusparseStatus_t status_cusparse;
 
-  cusparseCreateDnVec(&vecX,
+//double * testv;
+//cudaError t =  cudaMalloc( (void **) &testv, n*sizeof(double));
+status_cusparse =  cusparseCreateDnVec(&vecX,
                       n,
                       (void*)x,
                       CUDA_R_64F);
-  cusparseCreateDnVec(&vecY,
+printf("matX creation status %d\n", status_cusparse);  
+status_cusparse =  cusparseCreateDnVec(&vecY,
                       n,
                       (void *) result,
                       CUDA_R_64F);
-  cusparseStatus_t status_cusparse;
+printf("vecY creation status %d\n", status_cusparse);  
   status_cusparse = cusparseCreateCsr(&matA,
                     n,
                     n,
@@ -64,9 +69,11 @@ status_cusparse = cusparseSpMV_bufferSize(handle_cusparse,
                           CUDA_R_64F,
                           CUSPARSE_MV_ALG_DEFAULT,
                           &mv_buffer_size);
-printf("mv buffer size %d alpha %f beta %f status %d \n", mv_buffer_size, *al, *bet, status_cusparse);
-  cudaMalloc((void**) mv_buffer, mv_buffer_size);
 
+        cudaDeviceSynchronize();
+printf("mv buffer size %d alpha %f beta %f status %d \n", mv_buffer_size, *al, *bet, status_cusparse);
+cudaError t =  cudaMalloc( &mv_buffer, mv_buffer_size);
+if (t !=0) printf("allocated mv_buffer: is it NULL? %d, error %d \n", mv_buffer == NULL, t);
   cusparseDestroyDnVec(vecX);
   cusparseDestroyDnVec(vecY);
 
@@ -103,7 +110,7 @@ void initialize_and_analyze_L_and_U_solve(const int n,
                              lja,
                              infoL, 
                              &L_buffer_size);
-printf("buffer size L %d\n", L_buffer_size);
+//printf("buffer size L %d\n", L_buffer_size);
   cudaMalloc((void**)&(L_buffer), L_buffer_size);
 
   cusparseDcsrsv2_bufferSize(handle_cusparse, 
@@ -116,7 +123,7 @@ printf("buffer size L %d\n", L_buffer_size);
                              uja,
                              infoU, 
                              &U_buffer_size);
-printf("buffer size U %d\n", U_buffer_size);
+//printf("buffer size U %d\n", U_buffer_size);
   cudaMalloc((void**)&(U_buffer), U_buffer_size);
   cusparseStatus_t status_cusparse;
   status_cusparse = cusparseDcsrsv2_analysis(handle_cusparse, 
@@ -232,13 +239,15 @@ __global__ void cuda_vec_zero_kernel(const int n,
 double cuda_dot (const int n, const double *v, const double *w){
   double sum;
   
-   cublasDdot (handle_cublas, 
+  cublasStatus_t status;
+  status =  cublasDdot (handle_cublas, 
               n, 
               v, 
               1, 
               w, 
               1, 
               &sum);
+//printf("DOT product status %d\n", status);
   return sum;
 }
 
@@ -252,14 +261,16 @@ void cuda_scal (const int n, const double alpha, double *v){
 }
 
 void cuda_axpy (const int n, const double alpha, const double *x, double *y){
- cublasDaxpy(handle_cublas, 
+
+  cublasStatus_t status;
+ status = cublasDaxpy(handle_cublas, 
               n,
               &alpha,
               x, 
               1,
               y, 
               1);
-
+//printf("AXPY returned %d \n", status);
 }
 
 void cuda_csr_matvec(const int n, const int nnz, const int *ia, const int *ja, const double *a, const double *x, double *result, const double*al, const double *bet){
@@ -352,7 +363,7 @@ double one = 1.0;
 //
 void cuda_vec_vec(const int n, const double * x, const double * y, double *res){
 
-    cuda_vec_vec_kernel<<<n/1024+1, 1024>>>(n, x, y, res);
+    cuda_vec_vec_kernel<<<1024, 1024>>>(n, x, y, res);
 }
 
 //vector reciprocal computes 1./d 
@@ -360,7 +371,7 @@ void cuda_vec_vec(const int n, const double * x, const double * y, double *res){
 
 void cuda_vector_reciprocal(const int n, const double *v, double *res){
 
-    cuda_vec_reciprocal_kernel<<<n/1024+1, 1024>>>(n, v, res);
+    cuda_vec_reciprocal_kernel<<<1024, 1024>>>(n, v, res);
 }
 
 //vector sqrt takes an sqrt from each vector entry 
@@ -368,7 +379,7 @@ void cuda_vector_reciprocal(const int n, const double *v, double *res){
 
 void cuda_vector_sqrt(const int n, const double *v, double *res){
 
-    cuda_vec_sqrt_kernel<<<n, 1024>>>(n, v, res);
+    cuda_vec_sqrt_kernel<<<1024, 1024>>>(n, v, res);
 }
 
 void cuda_vec_copy(const int n, const double *src, double *dest){
@@ -379,6 +390,6 @@ void cuda_vec_copy(const int n, const double *src, double *dest){
 
 void cuda_vec_zero(const int n, double *vec){
 
-    cuda_vec_zero_kernel<<<n, 1024>>>(n, vec);
+    cuda_vec_zero_kernel<<<1024, 1024>>>(n, vec);
 }
 

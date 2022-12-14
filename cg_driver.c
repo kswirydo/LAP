@@ -72,7 +72,8 @@ void read_mm_file(const char *matrixFileName, mmatrix *A)
 	fgets(lineBuffer, sizeof(lineBuffer), fpm);
 	char * s = strstr(lineBuffer, "pattern");
 	if (s != NULL) noVals =1; 
-	while (lineBuffer[0] == '%'){ 
+printf("noVals? %d \n", noVals);	
+while (lineBuffer[0] == '%'){ 
 		//printf("Still wrong line: %s \n", lineBuffer);
 		fgets(lineBuffer, sizeof(lineBuffer), fpm);
 	}
@@ -200,11 +201,11 @@ void coo_to_csr(mmatrix *A)
 		A->csr_ja[i] = tmp[i].idx;
 		A->csr_vals[i] = tmp[i].value;
 	}
-#if 0	
-	for (int i=0; i<A->n; i++){
+#if 0
+	for (int i=0; i<10; i++){
 		printf("this is row %d \n", i);
 		for (int j=A->csr_ia[i]; j<A->csr_ia[i+1]; ++j){ 
-			printf("  %d,  ", A->csr_ja[j] );			
+			printf("  (%d, %f)  ", A->csr_ja[j], A->csr_vals[j] );			
 
 		}
 		printf("\n");
@@ -366,6 +367,8 @@ int main(int argc, char *argv[])
 	const char * precName = argv[2];
 	double cg_tol = atof(argv[3]);
 	int cg_maxit = atoi(argv[4]);
+	int M = atoi(argv[5]);
+	int K = atoi(argv[6]);
 	mmatrix *A, *L, *U, *D;
 
 	A = (mmatrix *)calloc(1, sizeof(mmatrix));
@@ -386,8 +389,8 @@ int main(int argc, char *argv[])
 	prec_data = (pdata *)calloc(1, sizeof(pdata));
 	prec_data->n = A->n;
 	prec_data->prec_op = (char *) precName;
-	prec_data->k = 6;
-	prec_data->m = 3;
+	prec_data->k = K;
+	prec_data->m = M;
 
 	mmatrix * d_A = (mmatrix *)calloc(1, sizeof(mmatrix));
 	mmatrix * d_L = (mmatrix *)calloc(1, sizeof(mmatrix));
@@ -405,11 +408,14 @@ int main(int argc, char *argv[])
 	printf("\t Preconditioner : %s\n", prec_data->prec_op);
 	printf("\t CG tolerance   : %2.16g\n", cg_tol);
 	printf("\t CG maxit       : %d \n", cg_maxit);
+	printf("\t M (outer it)   : %d \n", M);
+	printf("\t K (inner it)   : %d \n", K);
 	if (weighted) {
 		printf("\t Weighted ?     : Yes\n\n\n");
 	} else {
 		printf("\t Weighted ?     : No\n\n\n");
 	}
+
 	//	printf("preconditioner: %s L->nnz = %d L->nnz_unpacked = %d A->nnz %d A->nnz_unpacked %d\n", prec_data->prec_op, L->nnz, L->nnz_unpacked, A->nnz, A->nnz_unpacked);
 #if (CUDA || HIP)
 	if (strcmp(prec_data->prec_op, "GS_std")  == 0) {
@@ -515,6 +521,7 @@ int main(int argc, char *argv[])
 	}
 
 #if (CUDA || HIP)
+
 	initialize_handles();
 	double *d_aux;
 	double *d_b;
@@ -539,6 +546,7 @@ int main(int argc, char *argv[])
 	b=d_b;
 	e=d_e;
 	d=d_d;
+//printf("CUDA. copying pointers\n");
 	//create an rhs.
 #endif
 
@@ -546,7 +554,7 @@ int main(int argc, char *argv[])
 #if 1
 	double norme = (double) sqrt(A->n);  
 	double one_over_norme = 1./norme;
-	//printf ("scaling e by %16.16f, norme %16.16e \n", one_over_norme, norme);
+//	printf ("scaling e by %16.16f, norme %16.16e \n", one_over_norme, norme);
 	if (weighted == 0){
 		//non-weighted version
 		double be;
@@ -554,12 +562,18 @@ int main(int argc, char *argv[])
 		scal(A->n, one_over_norme, e);  
 		/* be = b'*e*/
 		be = dot(A->n, e, b);
-		//printf("dot product is %16.16f \n", be);
 		/*b = b-be*e; */
 		be = (-1.0f) * be;
-		axpy(A->n, be, e, b); 
+    double tt1, tt2;
 
-		//printf("norm b after projection %16.16f \n", sqrt(dot(A->n, b, b)));
+tt1 = dot(A->n, e,e);
+tt2 = dot(A->n, b, b);
+		printf("norm of e before axpy %16.16f, n = %d \n", tt1, A->n);
+		printf("norm of b before axpy %16.16f \n", tt2);
+	
+	axpy(A->n, be, e, b); 
+
+	//	printf("norm b after projection %16.16f \n", dot(A->n, b, b));
 	} else {
 		//weighted version
 		//aux = sqrt(d);`
@@ -658,10 +672,11 @@ int main(int argc, char *argv[])
 	A->csr_ia = d_A_ia;
 	A->csr_ja = d_A_ja;
 	A->csr_vals = d_A_a;
-
+printf("is ia NULL? %d is ja NULL? %d \n", A->csr_ia == NULL, A->csr_ja == NULL);
 	double one =1.0; double minusone=1.0;
 #if CUDA 
-	initialize_spmv_buffer(A->n, 
+//printf("initializin spmv buffer \n");	
+initialize_spmv_buffer(A->n, 
 			A->nnz_unpacked,
 			A->csr_ia,
 			A->csr_ja,
@@ -760,7 +775,7 @@ int main(int argc, char *argv[])
 	prec_data->aux_vec3 = aux_vec3;
 #endif
 
-	double *res_hist = (double *) calloc (10000, sizeof(double));
+	double *res_hist = (double *) calloc (26000, sizeof(double));
 	int it, flag;
 #if 1
 	//printf("A->nnz = %d \n", A->nnz_unpacked);
@@ -787,6 +802,7 @@ int main(int argc, char *argv[])
 	printf("\t Iters              : %d  \n", it);
 	printf("\t Time               : %2.4f  \n", time_CG/1000.0);
 	printf("\t Res. norm          : %2.16g  \n", res_hist[it]);
+  printf("\t Preconditioner     : %s\n", prec_data->prec_op);
 	if (flag == 0){
 		printf("\t Reason for exiting : CG converged  \n");
 	} else {
