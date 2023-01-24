@@ -41,12 +41,12 @@ status_cusparse =  cusparseCreateDnVec(&vecX,
                       n,
                       (void*)x,
                       CUDA_R_64F);
-printf("matX creation status %d\n", status_cusparse);  
+//printf("matX creation status %d\n", status_cusparse);  
 status_cusparse =  cusparseCreateDnVec(&vecY,
                       n,
                       (void *) result,
                       CUDA_R_64F);
-printf("vecY creation status %d\n", status_cusparse);  
+//printf("vecY creation status %d\n", status_cusparse);  
   status_cusparse = cusparseCreateCsr(&matA,
                     n,
                     n,
@@ -58,7 +58,7 @@ printf("vecY creation status %d\n", status_cusparse);
                     CUSPARSE_INDEX_32I,
                     CUSPARSE_INDEX_BASE_ZERO,
                     CUDA_R_64F);
-printf("matA creation status %d\n", status_cusparse);  
+//printf("matA creation status %d\n", status_cusparse);  
 status_cusparse = cusparseSpMV_bufferSize(handle_cusparse,
                           CUSPARSE_OPERATION_NON_TRANSPOSE,
                           al,
@@ -71,7 +71,7 @@ status_cusparse = cusparseSpMV_bufferSize(handle_cusparse,
                           &mv_buffer_size);
 
         cudaDeviceSynchronize();
-printf("mv buffer size %d alpha %f beta %f status %d \n", mv_buffer_size, *al, *bet, status_cusparse);
+//printf("mv buffer size %d alpha %f beta %f status %d \n", mv_buffer_size, *al, *bet, status_cusparse);
 cudaError t =  cudaMalloc( &mv_buffer, mv_buffer_size);
 if (t !=0) printf("allocated mv_buffer: is it NULL? %d, error %d \n", mv_buffer == NULL, t);
   cusparseDestroyDnVec(vecX);
@@ -309,7 +309,7 @@ void cuda_csr_matvec(const int n, const int nnz, const int *ia, const int *ja, c
                CUDA_R_64F,
                CUSPARSE_MV_ALG_DEFAULT,
                mv_buffer);
-//printf("matvec status: %d is MV BUFFER NULL? %d  is matA null? %d\n", status_cusparse, mv_buffer == NULL, matA==NULL);
+//`printf("matvec status: %d is MV BUFFER NULL? %d  is matA null? %d\n", status_cusparse, mv_buffer == NULL, matA==NULL);
 cusparseDestroySpMat(matCSR);
   cusparseDestroyDnVec(vecX);
   cusparseDestroyDnVec(vecY);
@@ -321,7 +321,7 @@ void cuda_lower_triangular_solve(const int n, const int nnzL, const int *lia, co
   //go thr
   //d_x3 = L^(-1)dx2
 double one = 1.0;
-  cusparseDcsrsv2_solve(handle_cusparse, 
+ cusparseStatus_t status =  cusparseDcsrsv2_solve(handle_cusparse, 
                                           CUSPARSE_OPERATION_NON_TRANSPOSE, 
                                           n, 
                                           nnzL, 
@@ -335,6 +335,7 @@ double one = 1.0;
                                           result,
                                           policy,
                                           L_buffer);
+//printf("status after tri solve is %d \n", status);
 }
 
 

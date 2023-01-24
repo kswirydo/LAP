@@ -9,14 +9,14 @@ void GS_std(int *ia, int *ja, double *a, int nnzA,  pdata* prec_data, double *ve
   double zero = 0.0;  
   double minusone = -1.0;
   vec_zero(n, vec_out);
-  //printf("k = %d\n", k);
+ // printf("k = %d\n", k);
   //backward sweep
   for (int i=0; i<k; ++i){
     //x = x + L \ ( b - As*x );
-    //printf("before mv: %f \n", dot(n, vec_out, vec_out)); 
+    //printf("Inside GS, L solve, before mv: %f \n", dot(n, vec_out, vec_out)); 
     vec_copy(n, vec_in, prec_data->aux_vec2);
     csr_matvec(n, nnzA,ia,  ja,  a, vec_out,  prec_data->aux_vec2, &minusone, &one, "A");
-    //printf("after mv: %f \n", dot(n, prec_data->aux_vec1, prec_data->aux_vec1)); 
+  //  printf("after mv: %f \n", dot(n, prec_data->aux_vec1, prec_data->aux_vec1)); 
     //aux_vec2 = aux_vec1*(-1) +vec_in
     //tri solve L^{-1}*aux_vec2
 
@@ -24,7 +24,7 @@ void GS_std(int *ia, int *ja, double *a, int nnzA,  pdata* prec_data, double *ve
     //for (int j=0; j<10; ++j) printf("r[%d]=%f\n", j, prec_data->aux_vec2[j]);
     lower_triangular_solve(n, prec_data->lnnz, prec_data->lia, prec_data->lja, prec_data->la,prec_data->d, prec_data->aux_vec2, prec_data->aux_vec1);
     //for (int j=0; j<10; ++j) printf("Lr[%d]=%f\n", j, prec_data->aux_vec1[j]);
-    //printf(" norm sq after L ts: %f \n", dot(n, prec_data->aux_vec1, prec_data->aux_vec1)); 
+//    printf(" norm sq after L ts: %f \n", dot(n, prec_data->aux_vec1, prec_data->aux_vec1)); 
 
     axpy(n, 1.0f, prec_data->aux_vec1, vec_out);
   }
@@ -55,7 +55,7 @@ void GS_it(int *ia, int *ja, double *a,int nnzA, pdata* prec_data, double *vec_i
   double zero = 0.0;  
   double minusone = -1.0;
   int m = prec_data->m;
-  //printf("m = %d k = %d \n", m, k);  
+//  printf("m = %d k = %d \n", m, k);  
   //set vec_out to 0
   vec_zero(n, vec_out); 
   //outer loop
@@ -64,11 +64,11 @@ void GS_it(int *ia, int *ja, double *a,int nnzA, pdata* prec_data, double *vec_i
     vec_copy(n, vec_in, prec_data->aux_vec2);
 
     csr_matvec(n, nnzA,ia,  ja,  a, vec_out,  prec_data->aux_vec2, &minusone, &one, "A");
-    //printf("res nrm %f \n", dot(n,  prec_data->aux_vec2,  prec_data->aux_vec2));  
+   // printf("res nrm %16.16f \n", dot(n,  prec_data->aux_vec2,  prec_data->aux_vec2));  
     //r = aux_vec2 = aux_vec1*(-1) +vec_in
     // y = aux_vec1 = D^{-1}aux_vec2
     vec_vec(n, prec_data->aux_vec2, prec_data->d_r, prec_data->aux_vec1); 
-    //printf("res nrm after scaling %f \n", dot(n,  prec_data->aux_vec1,  prec_data->aux_vec1));  
+  // printf("res nrm after scaling %16.16f \n", dot(n,  prec_data->aux_vec1,  prec_data->aux_vec1));  
     for (int i=0; i<k; ++i){
       //y = v.*(r-L*y);
       //vec3 = L*vec1    
@@ -76,11 +76,11 @@ void GS_it(int *ia, int *ja, double *a,int nnzA, pdata* prec_data, double *vec_i
       csr_matvec(n, prec_data->lnnz,prec_data->lia,prec_data->lja,  prec_data->la, prec_data->aux_vec1, prec_data->aux_vec3, &minusone, &one, "L");
       //axpy
 
-     // printf("\t res nrm inside first loop, after mv  %f \n", dot(n,   prec_data->aux_vec3,  prec_data->aux_vec3));  
+    //  printf("\t res nrm inside first loop, after mv  %f \n", dot(n,   prec_data->aux_vec3,  prec_data->aux_vec3));  
       vec_vec(n, prec_data->aux_vec3, prec_data->d_r, prec_data->aux_vec1); 
     }
 
-    //printf("res nrm after first loop %f \n", dot(n,  prec_data->aux_vec1,  prec_data->aux_vec1));  
+//    printf("res nrm after first loop %f \n", dot(n,  prec_data->aux_vec1,  prec_data->aux_vec1));  
     for (int i=0; i<k; ++i){
       //y = v.*(r-L*y);
       vec_copy(n, prec_data->aux_vec2, prec_data->aux_vec3);      

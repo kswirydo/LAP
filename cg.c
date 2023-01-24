@@ -36,11 +36,12 @@ void cg(int n, double nnz,
 	int notconv =1, iter =0;
 	//compute initial norm of r
 	//r = A*x
-	//printf("Norm of X %e norm of B %e \n", dot(n, x,x), dot(n, b, b));  
+//printf("Norm of X %e norm of B %e \n", dot(n, x,x), dot(n, b, b));  
 	csr_matvec(n, nnz, ia, ja, a, x, r, &one, &zero, "A");
 	//printf("Norm of A*X %e \n", dot(n, r,r));  
 	//r = -b +r = Ax-b
 	axpy(n, -1.0f, b, r);
+	//printf("Norm of r %e \n", dot(n, r,r));  
 	// r=(-1.0)*r
 	scal(n, -1.0f, r);
 	//norm of r
@@ -62,7 +63,7 @@ void cg(int n, double nnz,
 		}
 		else{
 			beta = rho_current/rho_previous;
-			//  printf("scaling by beta = %5.5e, rho_current = %5.5e, rho_previous = %5.5e \n", beta, rho_current, rho_previous);
+			  //printf("scaling by beta = %5.5e, rho_current = %5.5e, rho_previous = %5.5e \n", beta, rho_current, rho_previous);
 			// p = w+bet*p;
 			//printf("before scal \n");
 			scal(n, beta, p);
@@ -75,7 +76,7 @@ void cg(int n, double nnz,
 		//  alpha = rho_current/(p'*q);
 		pTq = dot(n, p, q);
 		alpha = rho_current/pTq; 
-		//printf("p^Tq = %5.5e,rho_current = %5.5e, alpha = %5.5e \n", pTq, rho_current, alpha);
+///		printf("p^Tq = %5.5e,rho_current = %5.5e, alpha = %5.5e \n", pTq, rho_current, alpha);
 		//x = x + alph*p;
 		axpy(n, alpha, p, x );
 		// r = r - alph*q;
