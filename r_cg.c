@@ -239,10 +239,16 @@ void create_L_and_split(mmatrix *A, mmatrix *L, mmatrix *U,mmatrix *D, int weigh
   int iu =0, il=0;
   int col;
   for (int i=0; i<A->n; ++i){
-    DD[i] = A->csr_ia[i+1]-A->csr_ia[i];
+// this only works for unweighted graphs!
+
+//    DD[i] = A->csr_ia[i+1]-A->csr_ia[i];
     //dont count yourself
-    DD[i]--; 
-  }
+  //  DD[i]--; 
+DD[i] = 0.0;
+for (int j = csr_ia[i]; j < csr_ja[i]; ++j){
+DD[i] += csr_ja[j];
+}  
+ }
   //    printf("vertex %d has degree %d \n", i, DD[i]);
   double Dsqrt;
   for (int i=0; i<A->n; ++i){

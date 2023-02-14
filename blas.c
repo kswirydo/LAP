@@ -2,9 +2,9 @@
 #include "cuda_blas.h"
 #include "hip_blas.h"
 
-extern "C" {
+//extern "C" {
 #include "openmp_blas.h"
-}
+//}
 #include "blas.h"
 #include "common.h"
 double dot (const int n, const double *v, const double *w){
