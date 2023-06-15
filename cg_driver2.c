@@ -83,9 +83,9 @@ void read_mm_file(const char *matrixFileName, mmatrix *A)
   //printf("Matrix size: %d x %d, nnz %d \n",A->n, A->m, A->nnz );
   //allocate
 
-  A->coo_vals = (double *)calloc(A->nnz+A->n, sizeof(double));
-  A->coo_rows = (int *)calloc(A->nnz+A->n, sizeof(int));
-  A->coo_cols = (int *)calloc(A->nnz+A->n, sizeof(int));
+  A->coo_vals = (double *)calloc(A->nnz, sizeof(double));
+  A->coo_rows = (int *)calloc(A->nnz, sizeof(int));
+  A->coo_cols = (int *)calloc(A->nnz, sizeof(int));
 #if 1
   //read
   int r, c;
@@ -107,11 +107,6 @@ void read_mm_file(const char *matrixFileName, mmatrix *A)
     if ((c < 1) || (r < 1))
       printf("We have got A PROBLEM! %d %d %16.16f \n", r - 1, c - 1, val);
   }//while
-    A->coo_cols[i] = j;
-    A->coo_vals[i] = 1.0f;
-    i++;
-  } 
-  A->nnz+=A->n;
   fclose(fpm);
 #endif
 }
@@ -139,6 +134,7 @@ void coo_to_csr(mmatrix *A)
   }
   //allocate full CSR structure
   A->nnz_unpacked = nnz_unpacked;
+  printf("original nnz: %d unpacked nnz %d \n", A->nnz, A->nnz_unpacked);
   A->csr_vals = (double *)calloc(A->nnz_unpacked, sizeof(double));
   A->csr_ja = (int *)calloc(A->nnz_unpacked, sizeof(int));
   A->csr_ia = (int *)calloc((A->n) + 1, sizeof(int));
@@ -217,9 +213,8 @@ void coo_to_csr(mmatrix *A)
 
 }
 
-void create_L_and_split(mmatrix *A, mmatrix *L, mmatrix *U,mmatrix *D, int weighted){
-  // we need access to L, U, and D explicitely, not only to the Laplacian
-  // w decides whether weighted (w=1) or not (w=0)
+void split(mmatrix *A, mmatrix *L, mmatrix *U,mmatrix *D){
+  // we need access to L, U, and D explicitely
   // we need degree of every row
   // allocate L and U bits and pieces;
   L->csr_ia = (int *) calloc (A->n+1, sizeof(int));
@@ -253,51 +248,28 @@ void create_L_and_split(mmatrix *A, mmatrix *L, mmatrix *U,mmatrix *D, int weigh
  }
   //    printf("vertex %d has degree %d \n", i, DD[i]);
   double Dsqrt;
-  for (int i=0; i<A->n; ++i){
+  for (int i = 0; i < A->n; ++i){
     L->csr_ia[i] = il;
     U->csr_ia[i] = iu;
-    if (weighted) Dsqrt = 1.0f/sqrt(DD[i]);
-    for (int j=A->csr_ia[i]; j<A->csr_ia[i+1]; ++j){
+    for (int j = A->csr_ia[i]; j < A->csr_ia[i + 1]; ++j){
       col = A->csr_ja[j];
       if (col == i) {
-        if (!weighted){
-          A->csr_vals[j]=(double) DD[i]; 
           D->csr_vals[i] = A->csr_vals[j];
           D->csr_ia[i] = i;
           D->csr_ja[i] = i;
-        }
-        else {
-          //printf("Weighted, putting 1.0 on the diagonal \n");
-          A->csr_vals[j]=(double)1.0f; 
-          D->csr_vals[i] = A->csr_vals[j];
-          D->csr_ia[i] = i;
-          D->csr_ja[i] = i;
-        }     
       }
-      else{
-        if (!weighted){
-          A->csr_vals[j] = (-1)*A->csr_vals[j];
-        }
-        else {
-
-          A->csr_vals[j] = (-1.0f)*A->csr_vals[j]*Dsqrt*(1.0f/sqrt(DD[col]));
-          //printf("Weighted, putting %f in (%d, %d) \n", A->csr_vals[j], i, j);
-        }
-      }
-
-      if (i<col){//row< col, upper part
+      if (i < col){//row< col, upper part
         U->csr_ja[iu] = A->csr_ja[j];
         U->csr_vals[iu] = A->csr_vals[j];
         iu++;
       }
-      if (i>col){//row > col, lower part
+      if (i > col){//row > col, lower part
 
         L->csr_ja[il] = A->csr_ja[j];
         L->csr_vals[il] = A->csr_vals[j];
         il++;
       }
     }//for with i
-
   }//for with j
   D->csr_ia[A->n] = A->n;
   L->csr_ia[A->n] = il;
@@ -314,7 +286,7 @@ void create_L_and_split(mmatrix *A, mmatrix *L, mmatrix *U,mmatrix *D, int weigh
   D->m = A->m;
   D->nnz = A->n;
 
-#if 0	
+#if 0
   printf("\n\n ==== A ==== \n");
   for (int i=0; i<10; i++){
     printf("this is row %d \n", i);
@@ -380,13 +352,13 @@ int main(int argc, char *argv[])
   read_mm_file(matrixFileName, A);
   coo_to_csr(A); 
 
-  int weighted = 0;
-  create_L_and_split(A,L,U,D, weighted);
-  //at this point we know our LAPLACIAN !
-  //NOTE: Laplacian is stored in A= L+U+D (matrix splitting).
-  //DONT CONFUSE degree matrix with D (D is a diagonal of A) and L with Laplacian (L is lower triangular part of A)
-
-  pdata * prec_data;  
+  split(A, L, U, D);
+//vector of diagonal elements
+  double *d = (double *) calloc (A->n, sizeof(double));
+  for (int i=0; i<A->n; ++i) {
+    d[i] = D->csr_vals[i];   
+  }  
+pdata * prec_data;  
   //for(int i=0; i<A->n; ++i) printf("b[%d] = %f\n", i, b[i]);
   prec_data = (pdata *)calloc(1, sizeof(pdata));
   prec_data->n = A->n;
@@ -404,8 +376,8 @@ int main(int argc, char *argv[])
   //now, if the preconditioner is GS_it or GS_it2, the setup is correct but if it is  
   //GS_std, we need to have the diagonal ADDED TO L AND U
   printf("\n\n");
-  printf("Solving graph Laplacian linear system for %s\n", matrixFileName);
-  if (cg_maxit>MAXIT) {
+  printf("Solving linear system for %s\n", matrixFileName);
+  if (cg_maxit > MAXIT) {
     printf("\t [ WARNING:]  maxit cannot be larger than %d, re-setting to MAX \n", MAXIT);
     cg_maxit = MAXIT;
   }
@@ -416,23 +388,18 @@ int main(int argc, char *argv[])
   printf("\t CG maxit       : %d \n", cg_maxit);
   printf("\t M (outer it)   : %d \n", M);
   printf("\t K (inner it)   : %d \n", K);
-  if (weighted) {
-    printf("\t Weighted ?     : Yes\n\n\n");
-  } else {
-    printf("\t Weighted ?     : No\n\n\n");
-  }
   //	printf("preconditioner: %s L->nnz = %d L->nnz_unpacked = %d A->nnz %d A->nnz_unpacked %d\n", prec_data->prec_op, L->nnz, L->nnz_unpacked, A->nnz, A->nnz_unpacked);
 #if (CUDA || HIP)
   if (strcmp(prec_data->prec_op, "GS_std")  == 0) {
 
     int *  new_L_ja = (int *) calloc (L->nnz+L->n, sizeof(int));
     int *  new_U_ja = (int *) calloc (U->nnz+U->n, sizeof(int));
-
     double *  new_L_a = (double *) calloc (L->nnz+L->n, sizeof(double));
     double * new_U_a = (double *) calloc (U->nnz+U->n, sizeof(double));
+
     int c = 0;
-    for (int ii=0; ii<L->n; ++ii){
-      for (int jj=L->csr_ia[ii]; jj<L->csr_ia[ii+1]; ++jj){
+    for (int ii = 0; ii<L->n; ++ii){
+      for (int jj = L->csr_ia[ii]; jj<L->csr_ia[ii+1]; ++jj){
         new_L_ja[c] = L->csr_ja[jj];
         new_L_a[c] = L->csr_vals[jj];
         c++;     
@@ -504,109 +471,28 @@ int main(int argc, char *argv[])
       printf("\n");
     } //for
 #endif 
-
-
   }//if
 #endif 
-  //allocate space for the GPU
-  //  double *d_e, *d_etilde, *d_b, *d_d;
 
-  double *e = (double *) calloc (A->n, sizeof(double));
   double *b = (double *) calloc (A->n, sizeof(double));
-  double *aux = (double *) calloc (A->n, sizeof(double));
   //vector of vertex degrees
-  double *d = (double *) calloc (A->n, sizeof(double));
   for (int i=0; i<A->n; ++i) {
-    e[i]= 1.0f;
-    b[i] = pow((-1.0),((i%2)));
-    //printf("b[%d] = %f\n",i, b[i] );
-    //(double) (rand()%200)/(rand()%100);
-   // d[i] = A->csr_ia[i+1]-A->csr_ia[i]-1; //dont count yourself
-d[i] = D->csr_vals[i];   
-//  printf("d[%d] = %f, 1/d = %16.16f \n", i, d[i], 1.0/d[i]);
-
+    b[i] = 1.0;
   }
 
 #if (CUDA || HIP)
 
   initialize_handles();
-  double *d_aux;
   double *d_b;
-  double *d_d;
-  double *d_e;
-
-  d_aux = (double *) mallocForDevice (d_aux,A->n, sizeof(double));
-
-
   d_b = (double*) mallocForDevice (d_b,A->n, sizeof(double));
-  d_d = (double*) mallocForDevice (d_d,A->n, sizeof(double));
-  d_e = (double*) mallocForDevice (d_e,A->n, sizeof(double));
   memcpyDevice(d_b, b,  A->n,sizeof(double) , "H2D");
-  memcpyDevice(d_d, d,  A->n,sizeof(double) , "H2D");
-  memcpyDevice(d_e, e,A->n,sizeof(double),  "H2D");
   //printf("norm sq b before projection %16.16f \n", dot(A->n, d_b, d_b));
   free(b);
-  free(d);
-  free(e);
-  free(aux);
-  aux=d_aux;
   b=d_b;
-  e=d_e;
-  d=d_d;
-  //printf("CUDA. copying pointers\n");
-  //create an rhs.
 #endif
 
 #if 1
 #if 1
-  double norme = (double) sqrt(A->n);  
-  double one_over_norme = 1./norme;
-  //	printf ("scaling e by %16.16f, norme %16.16e \n", one_over_norme, norme);
-  if (weighted == 0){
-    //non-weighted version
-    double be;
-    /* e = (1/norme) e;*/
-    scal(A->n, one_over_norme, e);  
-    /* be = b'*e*/
-    be = dot(A->n, e, b);
-    /*b = b-be*e; */
-    be = (-1.0f) * be;
-    double tt1, tt2;
-
-    tt1 = dot(A->n, e,e);
-    tt2 = dot(A->n, b, b);
-    printf("norm of e before axpy %16.16f, n = %d \n", tt1, A->n);
-    printf("norm of b before axpy %16.16f \n", tt2);
-
-    axpy(A->n, be, e, b); 
-
-    //	printf("norm b after projection %16.16f \n", dot(A->n, b, b));
-  } else {
-    //weighted version
-    //aux = sqrt(d);`
-    vector_sqrt(A->n, d, aux);
-
-    //aux = aux.*e
-    vec_vec(A->n, aux, e, aux);
-    //De_norm = norm(D_De);
-    double De_norm;
-
-    De_norm = dot(A->n, aux, aux);  
-    De_norm = 1.0/sqrt(De_norm);
-    //De = (1/norm(De))*De;
-
-    scal(A->n, De_norm, aux);
-
-    //   bwe = b'*De;
-    double bwe;
-
-    bwe = dot(A->n, b, aux);  
-    //bProjw = b- bwe*wetilde;
-    bwe *= (-1.0f);
-    axpy(A->n,bwe, aux, b);
-  }
-  // at this point the Laplacian and the rhs are created.
-
 
   prec_data->lnnz = L->nnz;
   prec_data->unnz = U->nnz;
@@ -628,21 +514,16 @@ d[i] = D->csr_vals[i];
   memcpyDevice(prec_data->uja,U->csr_ja , (U->nnz), sizeof(int),  "H2D");
   memcpyDevice(prec_data->ua,U->csr_vals , (U->nnz), sizeof(double),  "H2D");
   prec_data->d_r = (double*) mallocForDevice (prec_data->d_r,(A->n), sizeof(double));
-  if (!weighted){
 
-    vector_reciprocal(A->n, d, prec_data->d_r);
-  } else {
-
-    double *dd = (double *) calloc (A->n, sizeof(double));
-    for (int ii=0; ii<A->n; ++ii){
-      dd[ii]=1.0;
-    }
-
-    memcpyDevice(prec_data->d_r,dd , (A->n), sizeof(double),  "H2D");
-    free(dd);
-  }
+//create dd out of d
+  double* d_d;
+  d_d = (double*) mallocForDevice (d_d,A->n, sizeof(double));
+  memcpyDevice(d_d, d,  A->n,sizeof(double) , "H2D");
+  vector_reciprocal(A->n, d_d, prec_data->d_r);
+  free(d);
+  
   //printf("norm of d %f norm of d_r %d \n", dot(A->n, d,d), dot(A->n, prec_data->d_r, prec_data->d_r));
-  prec_data->d=d;
+  prec_data->d = d;
 
   prec_data->aux_vec1 = (double*) mallocForDevice (prec_data->aux_vec1,(A->n), sizeof(double));
   prec_data->aux_vec2 = (double*)  mallocForDevice (prec_data->aux_vec2,(A->n), sizeof(double));

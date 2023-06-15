@@ -38,7 +38,7 @@ void openmp_csr_matvec(const int n, const int nnz, const int *ia, const int *ja,
   for (i=0; i<n; ++i){
     //go through each column in this row
     s = result[i] * beta;  
-#pragma omp simd private(j) reduction(+:s)
+#pragma omp simd reduction(+:s)
     for (j=ia[i]; j<ia[i+1]; j++){
       col = ja[j];
       s += (alpha*a[j]*x[col]);
@@ -74,13 +74,13 @@ void openmp_upper_triangular_solve(const int n, const int nnz, const int *uia, c
   int i,j,col;
   double s; 
  //this kind of works but the result is non deterministic 
- #pragma omp target teams distribute ordered map(to:uia[0:n+1],uja[0:nnz],ua[0:nnz], x[0:n], diagonal[0:n]) map(tofrom:result[0:n]) 
+ #pragma omp target teams distribute map(to:uia[0:n+1],uja[0:nnz],ua[0:nnz], x[0:n], diagonal[0:n]) map(tofrom:result[0:n]) 
  // #pragma omp target map(to:uia[0:n+1],uja[0:nnz],ua[0:nnz], x[0:n], diagonal[0:n]) map(tofrom:result[0:n]) 
   for (i=n-1; i>=0; --i){
     s=0.0;
 
     result[i] = 0.0f;
-#pragma omp simd private(j, col) reduction(+:s)
+#pragma omp simd private( col) reduction(+:s)
 //map(to:uia[0:n+1],uja[0:nnz],ua[0:nnz],result[0:n]) map(from:s)
     for (j=uia[i]; j<uia[i+1]; ++j){
       col = uja[j];

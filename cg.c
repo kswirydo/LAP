@@ -48,12 +48,12 @@ void cg(int n, double nnz,
 	res_norm_history[0] = dot(n, r,r);
 	res_norm_history[0] = sqrt(res_norm_history[0]);
 	tolrel = tol*res_norm_history[0];
-	printf("CG: it %d, res norm %5.5e \n",0, res_norm_history[0]);
+//	printf("CG: it %d, res norm %5.5e \n",0, res_norm_history[0]);
 #if 1
 	while (notconv){
-		//printf("Norm of X before prec %e \n", dot(n, r,r));  
+	//	printf("Norm of X before prec %e \n", dot(n, r,r));  
 		prec_function(ia, ja, a, nnz, prec_data, r, w);
-		//printf("Norm of X after prec %e \n", dot(n, w,w));  
+	//	printf("Norm of X after prec %e \n", dot(n, w,w));  
 		// rho_current = r'*w;
 		rho_current = dot(n, r, w);
 		if (iter == 0){
@@ -63,7 +63,7 @@ void cg(int n, double nnz,
 		}
 		else{
 			beta = rho_current/rho_previous;
-			  //printf("scaling by beta = %5.5e, rho_current = %5.5e, rho_previous = %5.5e \n", beta, rho_current, rho_previous);
+		//	  printf("scaling by beta = %5.5e, rho_current = %5.5e, rho_previous = %5.5e \n", beta, rho_current, rho_previous);
 			// p = w+bet*p;
 			//printf("before scal \n");
 			scal(n, beta, p);
