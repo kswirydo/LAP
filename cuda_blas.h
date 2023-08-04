@@ -57,5 +57,10 @@ void initialize_L_and_U_descriptors(const int n,
                                   int *uia, 
                                   int *uja, 
                                   double *ua);
+void initialize_ichol(const int n, 
+                      const int nnzA, 
+                      int *ia, 
+                      int *ja, 
+                      double *a);
 
 #endif
