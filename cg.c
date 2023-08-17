@@ -15,25 +15,6 @@ void cg(int n, double nnz,
 		double * res_norm_history //output: residual norm history
 		){
 
-//debug
-
-	double* test_vals  = (double*) mallocForDevice(test_vals, nnz, sizeof(double));
-	int* test_ia  = (int*) mallocForDevice(test_ia, n+1, sizeof(int));
-	int* test_ja  = (int*) mallocForDevice(test_ja, nnz, sizeof(int));
-
-  memcpyDevice(test_vals, prec_data->ichol_vals,  nnz,sizeof(double) , "D2H");
-  memcpyDevice(test_ia, ia,  n+1,sizeof(int) , "D2H");
-  memcpyDevice(test_ja, ja,  nnz,sizeof(int) , "D2H");
-#if 1
-  for (int ii = 0; ii<10; ++ii)
-  {
-    printf("this is row %d, it starts at %d and ends at %d \n", ii, test_ia[ii], test_ia[ii+1]);
-    for (int jj=test_ia[ii]; jj<test_ia[ii+1]; ++jj){
-  printf("[%d %f] ", test_ja[jj], test_vals[jj]);
-    }
-    printf("\n");
-  }
-#endif
 #if (CUDA || HIP)
 	double *r;
 	double *w;
@@ -56,9 +37,9 @@ void cg(int n, double nnz,
 	int notconv =1, iter =0;
 	//compute initial norm of r
 	//r = A*x
-printf("Norm of X %e norm of B %e \n", dot(n, x,x), dot(n, b, b));  
+//printf("Norm of X %e norm of B %e \n", dot(n, x,x), dot(n, b, b));  
 	csr_matvec(n, nnz, ia, ja, a, x, r, &one, &zero, "A");
-	printf("Norm of A*X %e \n", dot(n, r,r));  
+	//printf("Norm of A*X %e \n", dot(n, r,r));  
 	//r = -b +r = Ax-b
 	axpy(n, -1.0f, b, r);
 	printf("Norm of r %e \n", dot(n, r,r));  
@@ -73,9 +54,9 @@ printf("Norm of X %e norm of B %e \n", dot(n, x,x), dot(n, b, b));
 printf("CG: it %d, res norm %5.5e \n",0, res_norm_history[0]);
 #if 1
 	while (notconv){
-		printf("Norm of X before prec %16.16e \n", dot(n, r,r));  
+		//printf("Norm of X before prec %16.16e \n", dot(n, r,r));  
 		prec_function(ia, ja, a, nnz, prec_data, r, w);
-		printf("Norm of X after prec %16.16e \n", dot(n, w,w));  
+		//printf("Norm of X after prec %16.16e \n", dot(n, w,w));  
 		// rho_current = r'*w;
 		rho_current = dot(n, r, w);
 		if (iter == 0){

@@ -169,16 +169,19 @@ void initialize_ichol(const int n,
   // Create matrix descriptor for M
   rocsparse_status status_rocsparse;
   rocsparse_create_mat_descr(&descrM);
-
+  rocsparse_set_mat_type(descrM, rocsparse_matrix_type_general);
+  
   // Create matrix descriptor for L
   rocsparse_create_mat_descr(&descrLic);
   rocsparse_set_mat_fill_mode(descrLic, rocsparse_fill_mode_lower);
-  rocsparse_set_mat_diag_type(descrLic, rocsparse_diag_type_unit);
+  rocsparse_set_mat_diag_type(descrLic, rocsparse_diag_type_non_unit);
+  rocsparse_set_mat_index_base(descrLic, rocsparse_index_base_zero);
 
   // Create matrix descriptor for L'
   rocsparse_create_mat_descr(&descrLtic);
   rocsparse_set_mat_fill_mode(descrLtic, rocsparse_fill_mode_upper);
   rocsparse_set_mat_diag_type(descrLtic, rocsparse_diag_type_non_unit);
+  rocsparse_set_mat_index_base(descrLtic, rocsparse_index_base_zero);
 
   // Create matrix info structure
   rocsparse_create_mat_info(&infoM);
@@ -206,17 +209,17 @@ void initialize_ichol(const int n,
                                a,
                                ia,
                                ja,
-                               infoLic,
+                               infoM,
                                &buffer_size_L);
   rocsparse_dcsrsv_buffer_size(handle_rocsparse,
                                rocsparse_operation_transpose,
                                n,
                                nnzA,
-                               descrLtic,
+                               descrLic,
                                a,
                                ia,
                                ja,
-                               infoLtic,
+                               infoM,
                                &buffer_size_Lt);
   printf("Buffer sizes: %d %d %d \n", buffer_size_M, buffer_size_L, buffer_size_Lt);
   size_t buffer_size = max(buffer_size_M, max(buffer_size_L, buffer_size_Lt));
@@ -246,7 +249,7 @@ printf("finalsize %d \n",buffer_size);
                                                 a,
                                                 ia,
                                                 ja,
-                                                infoLic,
+                                                infoM,
                                                 rocsparse_analysis_policy_reuse,
                                                 rocsparse_solve_policy_auto,
                                                 ichol_buffer);
@@ -255,11 +258,11 @@ printf("finalsize %d \n",buffer_size);
                                                 rocsparse_operation_transpose,
                                                 n,
                                                 nnzA,
-                                                descrLtic,
+                                                descrLic,
                                                 a,
                                                 ia,
                                                 ja,
-                                                infoLtic,
+                                                infoM,
                                                 rocsparse_analysis_policy_reuse,
                                                 rocsparse_solve_policy_auto,
                                                 ichol_buffer);
@@ -301,11 +304,8 @@ printf("finalsize %d \n",buffer_size);
 
 void hip_ichol(int *ia, int *ja, double *a, int nnzA, pdata* prec_data, double * x, double *y)
 {
-  double one = .001;
+  double one = 1.0;
   rocsparse_status st;
-// hip_vec_set( prec_data->n, 0.1, x);
-  printf("before L solve: norm of input %f, norm of output %16.16e\n", hip_dot (prec_data->n, x, x), hip_dot (prec_data->n, prec_data->aux_vec1, prec_data->aux_vec1));
-  printf("nnzA %d, n %d \n", nnzA, prec_data->n);
   st = rocsparse_dcsrsv_solve(handle_rocsparse,
                               rocsparse_operation_none,
                               prec_data->n,
@@ -315,31 +315,29 @@ void hip_ichol(int *ia, int *ja, double *a, int nnzA, pdata* prec_data, double *
                                prec_data->ichol_vals,
                               ia,
                               ja,
-                              infoLic,
+                              infoM,
                               x,//input
                               prec_data->aux_vec1, //output 
                               rocsparse_solve_policy_auto,
                               ichol_buffer);
 
-  printf("status L solve: %d \n", st);
-
-  printf("before L^T solve: norm of input %16.16e, norm of output %16.16e\n", hip_dot (prec_data->n, prec_data->aux_vec1, prec_data->aux_vec1), hip_dot (prec_data->n, y, y) );
+  if (st!=0) printf("before L^T solve: norm of input %16.16e, norm of output %16.16e\n", hip_dot (prec_data->n, prec_data->aux_vec1, prec_data->aux_vec1), hip_dot (prec_data->n, y, y) );
   // Solve L'y = z
   st =	rocsparse_dcsrsv_solve(handle_rocsparse,
                                rocsparse_operation_transpose,
                                prec_data->n,
                                nnzA,
                                &one,
-                               descrLtic,
+                               descrLic,
                                prec_data->ichol_vals,
                                ia,
                                ja,
-                               infoLtic,
+                               infoM,
                                prec_data->aux_vec1, 
                                y, 
                                rocsparse_solve_policy_auto,
                                ichol_buffer);
-  printf("status L^T solve: %d \n", st);
+  if (st!=0) printf("status L^T solve: %d \n", st);
 }
 
 __global__ void hip_vec_vec_kernel(const int n,
