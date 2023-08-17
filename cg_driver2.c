@@ -579,7 +579,7 @@ int main(int argc, char *argv[])
   memcpyDevice(d_A_ia,A->csr_ia , sizeof(int) , (A->n+1), "H2D");
   memcpyDevice(d_A_ja,A->csr_ja , sizeof(int) , (A->nnz_unpacked), "H2D");
   memcpyDevice(d_A_a ,A->csr_vals , sizeof(double) , (A->nnz_unpacked), "H2D");
-printf("driver: A->n = %d, A->nnz = %d\n",A->n,  A->nnz_unpacked);
+  printf("driver: A->n = %d, A->nnz = %d\n",A->n,  A->nnz_unpacked);
 #if 0
   for (int i=0; i<10; i++){
     printf("driver: this is row %d \n", i);
@@ -601,7 +601,7 @@ printf("driver: A->n = %d, A->nnz = %d\n",A->n,  A->nnz_unpacked);
   printf("is ia NULL? %d is ja NULL? %d \n", A->csr_ia == NULL, A->csr_ja == NULL);
   double one =1.0; double minusone=1.0;
 #if CUDA 
-printf("initializin spmv buffer \n");	
+  printf("initializin spmv buffer \n");	
   initialize_spmv_buffer(A->n, 
                          A->nnz_unpacked,
                          A->csr_ia,
@@ -664,15 +664,17 @@ printf("initializin spmv buffer \n");
 
   if (strcmp(prec_data->prec_op, "ichol")  == 0) {
 
-  prec_data->ichol_vals = (double *) mallocForDevice (prec_data->ichol_vals,(A->nnz_unpacked), sizeof(double));
-  memcpyDevice(prec_data->ichol_vals, A->csr_vals,  A->nnz_unpacked,sizeof(double) , "D2D");
- 
-     initialize_ichol(A->n, 
-                      A->nnz_unpacked, 
-                      A->csr_ia, 
-                      A->csr_ja, 
-                      prec_data->ichol_vals);
-}
+#if (CUDA || HIP)
+    prec_data->ichol_vals = (double *) mallocForDevice (prec_data->ichol_vals,(A->nnz_unpacked), sizeof(double));
+    memcpyDevice(prec_data->ichol_vals, A->csr_vals,  A->nnz_unpacked,sizeof(double) , "D2D");
+
+    initialize_ichol(A->n, 
+                     A->nnz_unpacked, 
+                     A->csr_ia, 
+                     A->csr_ja, 
+                     prec_data->ichol_vals);
+#endif
+  }
 
 #if CUDA
   initialize_L_and_U_descriptors(A->n, 

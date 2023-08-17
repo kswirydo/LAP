@@ -91,6 +91,10 @@ void ichol(int *ia, int *ja, double *a, int nnzA, pdata* prec_data, double * x, 
   simple_ichol( ia, ja, a, nnzA, prec_data, x, y);
 #elif CUDA
   cuda_ichol( ia, ja, a, nnzA, prec_data, x, y);
+#elif OPENMP
+  openmp_ichol( ia, ja, a, nnzA, prec_data, x, y);
+#elif HIP
+  hip_ichol( ia, ja, a, nnzA, prec_data, x, y);
 #endif
 }
 
