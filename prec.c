@@ -31,6 +31,12 @@ void prec_function(int *ia,
     //iterative GS
     GS_it(ia, ja,a,nnzA, prec_data,x,y);
   }
+
+  if (strcmp(prec_data->prec_op, "ichol") == 0){
+    //incomplete Cholesky
+    //printf("Dispatcher: ICHOL\n");
+    ichol(ia, ja, a, nnzA, prec_data, x, y);
+  }
   if (strcmp(prec_data->prec_op, "GS_it2") == 0){
     //iterative GS v2
 

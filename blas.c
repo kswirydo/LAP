@@ -71,6 +71,8 @@ void lower_triangular_solve(const int n, const int nnz, const int *lia, const in
 #endif
 }
 
+
+
 void upper_triangular_solve(const int n, const int nnz, const int *uia, const int *uja, const double *ua,const double *diag, const double *x, double *result){
 #if NOACC
   simple_upper_triangular_solve(n, nnz, uia, uja, ua,diag, x, result);
@@ -80,6 +82,15 @@ void upper_triangular_solve(const int n, const int nnz, const int *uia, const in
   openmp_upper_triangular_solve(n, nnz, uia, uja, ua,diag, x, result);
 #elif HIP
   hip_upper_triangular_solve(n, nnz, uia, uja, ua,diag, x, result);
+#endif
+}
+
+
+void ichol(int *ia, int *ja, double *a, int nnzA, pdata* prec_data, double * x, double *y){
+#if NOACC
+  simple_ichol( ia, ja, a, nnzA, prec_data, x, y);
+#elif CUDA
+  cuda_ichol( ia, ja, a, nnzA, prec_data, x, y);
 #endif
 }
 

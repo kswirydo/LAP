@@ -48,12 +48,12 @@ void cg(int n, double nnz,
 	res_norm_history[0] = dot(n, r,r);
 	res_norm_history[0] = sqrt(res_norm_history[0]);
 	tolrel = tol*res_norm_history[0];
-//	printf("CG: it %d, res norm %5.5e \n",0, res_norm_history[0]);
+printf("CG: it %d, res norm %5.5e \n",0, res_norm_history[0]);
 #if 1
 	while (notconv){
-	//	printf("Norm of X before prec %e \n", dot(n, r,r));  
+	//	printf("Norm of X before prec %16.16e \n", dot(n, r,r));  
 		prec_function(ia, ja, a, nnz, prec_data, r, w);
-	//	printf("Norm of X after prec %e \n", dot(n, w,w));  
+	//	printf("Norm of X after prec %16.16e \n", dot(n, w,w));  
 		// rho_current = r'*w;
 		rho_current = dot(n, r, w);
 		if (iter == 0){
@@ -73,10 +73,13 @@ void cg(int n, double nnz,
 		}
 		//  q = As*p;
 		csr_matvec(n, nnz, ia, ja, a, p, q, &one, &zero, "A");
-		//  alpha = rho_current/(p'*q);
+		
+//  alpha = rho_current/(p'*q);
+//printf("p'*p = %16.16e, q'*q = %16.16f \n",dot(n, p,p), dot(n, q,q) );
+
 		pTq = dot(n, p, q);
 		alpha = rho_current/pTq; 
-///		printf("p^Tq = %5.5e,rho_current = %5.5e, alpha = %5.5e \n", pTq, rho_current, alpha);
+	//	printf("p^Tq = %5.15e,rho_current = %5.15e, alpha = %5.15e \n", pTq, rho_current, alpha);
 		//x = x + alph*p;
 		axpy(n, alpha, p, x );
 		// r = r - alph*q;

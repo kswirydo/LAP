@@ -4,8 +4,8 @@
 #pragma once
 
 #define NOACC 0
-#define CUDA 0
-#define OPENMP 1
+#define CUDA 1
+#define OPENMP 0
 #define HIP 0
 typedef struct{
  
@@ -20,6 +20,7 @@ typedef struct{
   double *ua;
   int unnz;
 
+  double * ichol_vals;
   double *d;
   double *d_r;//d_r = 1./d
   int n;

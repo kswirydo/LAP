@@ -5,6 +5,8 @@ void scal (const int n, const double alpha, double *v);
 void csr_matvec(const int n, const int nnz, const int *ia, const int *ja, const double *a, const double *x, double *result, const  double*al, const double *bet,const char * kind);
 void lower_triangular_solve(const int n, const int nnz, const int *lia, const int *lja, const double *la,const double * diag, const double *x, double *result);
 void upper_triangular_solve(const int n, const int nnz, const int *uia, const int *uja, const double *ua,const double * diag, const double *x, double *result);
+
+void ichol(int *ia, int *ja, double *a, int nnzA, pdata* prec_data, double * x, double *y);
 void vec_vec(const int n, const double * x, double * y, double *res);
 void vector_reciprocal(const int n, const double *v, double *res);
 void vector_sqrt(const int n, const double *v, double *res);

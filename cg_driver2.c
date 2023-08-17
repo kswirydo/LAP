@@ -213,6 +213,36 @@ void coo_to_csr(mmatrix *A)
 
 }
 
+//read rhs from file
+
+void read_rhs(const char *rhsFileName, double *rhs)
+{
+
+  FILE* fpr = fopen(rhsFileName, "r");
+  char lineBuffer[256];
+
+  fgets(lineBuffer, sizeof(lineBuffer), fpr);
+  while (lineBuffer[0] == '%') { 
+    fgets(lineBuffer, sizeof(lineBuffer), fpr);
+  } 
+  int N, m;
+  sscanf(lineBuffer, "%ld %ld", &N, &m);  
+  // printf("N = %d m = %d \n", N, m);
+  int i = 0;
+  double val;
+  //allocate
+
+  while (fgets(lineBuffer, sizeof(lineBuffer), fpr) != NULL) {
+    sscanf(lineBuffer, "%lf", &val);
+    rhs[i] = val;
+    //   printf("rhs[%d] = %16.18f \n",i, val);
+    // if (i<10)  printf("rhs[%d] = %s \n",i, lineBuffer);
+    i++;
+  }
+  fclose(fpr);
+}
+
+
 void split(mmatrix *A, mmatrix *L, mmatrix *U,mmatrix *D){
   // we need access to L, U, and D explicitely
   // we need degree of every row
@@ -235,17 +265,17 @@ void split(mmatrix *A, mmatrix *L, mmatrix *U,mmatrix *D){
   int iu =0, il=0;
   int col;
   for (int i=0; i<A->n; ++i){
-//    DD[i] = A->csr_ia[i+1]-A->csr_ia[i];
+    //    DD[i] = A->csr_ia[i+1]-A->csr_ia[i];
     //dont count yourself
- //   DD[i]--; 
- 
+    //   DD[i]--; 
+
 
     DD[i] = -1.0; //dont count yourself
     for (int j = A->csr_ia[i]; j < A->csr_ia[i+1]; ++j){
       DD[i] += A->csr_vals[j];
     }  
 
- }
+  }
   //    printf("vertex %d has degree %d \n", i, DD[i]);
   double Dsqrt;
   for (int i = 0; i < A->n; ++i){
@@ -254,9 +284,9 @@ void split(mmatrix *A, mmatrix *L, mmatrix *U,mmatrix *D){
     for (int j = A->csr_ia[i]; j < A->csr_ia[i + 1]; ++j){
       col = A->csr_ja[j];
       if (col == i) {
-          D->csr_vals[i] = A->csr_vals[j];
-          D->csr_ia[i] = i;
-          D->csr_ja[i] = i;
+        D->csr_vals[i] = A->csr_vals[j];
+        D->csr_ia[i] = i;
+        D->csr_ja[i] = i;
       }
       if (i < col){//row< col, upper part
         U->csr_ja[iu] = A->csr_ja[j];
@@ -344,6 +374,7 @@ int main(int argc, char *argv[])
   int cg_maxit = atoi(argv[4]);
   int M = atoi(argv[5]);
   int K = atoi(argv[6]);
+  printf("argc = %d \n", argc);  
   mmatrix *A, *L, *U, *D;
   A = (mmatrix *)calloc(1, sizeof(mmatrix));
   L = (mmatrix *)calloc(1, sizeof(mmatrix));
@@ -353,12 +384,12 @@ int main(int argc, char *argv[])
   coo_to_csr(A); 
 
   split(A, L, U, D);
-//vector of diagonal elements
+  //vector of diagonal elements
   double *d = (double *) calloc (A->n, sizeof(double));
   for (int i=0; i<A->n; ++i) {
     d[i] = D->csr_vals[i];   
   }  
-pdata * prec_data;  
+  pdata * prec_data;  
   //for(int i=0; i<A->n; ++i) printf("b[%d] = %f\n", i, b[i]);
   prec_data = (pdata *)calloc(1, sizeof(pdata));
   prec_data->n = A->n;
@@ -383,6 +414,7 @@ pdata * prec_data;
   }
   printf("\t Matrix size    : %d x %d \n", A->n, A->n);
   printf("\t Matrix nnz     : %d  \n", A->nnz);
+  printf("\t Matrix nnz un  : %d  \n", A->nnz_unpacked);
   printf("\t Preconditioner : %s\n", prec_data->prec_op);
   printf("\t CG tolerance   : %2.16g\n", cg_tol);
   printf("\t CG maxit       : %d \n", cg_maxit);
@@ -475,11 +507,16 @@ pdata * prec_data;
 #endif 
 
   double *b = (double *) calloc (A->n, sizeof(double));
-  //vector of vertex degrees
-  for (int i=0; i<A->n; ++i) {
-    b[i] = 1.0;
-  }
+  if (argc >7) {//optional rhs file is given
 
+    const char * rhsFileName = argv[7];
+    read_rhs(rhsFileName, b);
+  } else {
+    //vector of vertex degrees
+    for (int i=0; i<A->n; ++i) {
+      b[i] = 1.0;
+    }
+  }
 #if (CUDA || HIP)
 
   initialize_handles();
@@ -515,13 +552,13 @@ pdata * prec_data;
   memcpyDevice(prec_data->ua,U->csr_vals , (U->nnz), sizeof(double),  "H2D");
   prec_data->d_r = (double*) mallocForDevice (prec_data->d_r,(A->n), sizeof(double));
 
-//create dd out of d
+  //create dd out of d
   double* d_d;
   d_d = (double*) mallocForDevice (d_d,A->n, sizeof(double));
   memcpyDevice(d_d, d,  A->n,sizeof(double) , "H2D");
   vector_reciprocal(A->n, d_d, prec_data->d_r);
   free(d);
-  
+
   //printf("norm of d %f norm of d_r %d \n", dot(A->n, d,d), dot(A->n, prec_data->d_r, prec_data->d_r));
   prec_data->d = d;
 
@@ -542,11 +579,12 @@ pdata * prec_data;
   memcpyDevice(d_A_ia,A->csr_ia , sizeof(int) , (A->n+1), "H2D");
   memcpyDevice(d_A_ja,A->csr_ja , sizeof(int) , (A->nnz_unpacked), "H2D");
   memcpyDevice(d_A_a ,A->csr_vals , sizeof(double) , (A->nnz_unpacked), "H2D");
+printf("driver: A->n = %d, A->nnz = %d\n",A->n,  A->nnz_unpacked);
 #if 0
-  for (int i=0; i<A->n; i++){
-    printf("this is row %d \n", i);
-    for (int j=L->csr_ia[i]; j<L->csr_ia[i+1]; ++j){ 
-      printf(" (%d, %f) ", L->csr_ja[j], L->csr_vals[j] );			
+  for (int i=0; i<10; i++){
+    printf("driver: this is row %d \n", i);
+    for (int j=A->csr_ia[i]; j<A->csr_ia[i+1]; ++j){ 
+      printf(" (%d, %f) ", A->csr_ja[j], A->csr_vals[j] );			
 
     }
     printf("\n");
@@ -563,7 +601,7 @@ pdata * prec_data;
   printf("is ia NULL? %d is ja NULL? %d \n", A->csr_ia == NULL, A->csr_ja == NULL);
   double one =1.0; double minusone=1.0;
 #if CUDA 
-  //printf("initializin spmv buffer \n");	
+printf("initializin spmv buffer \n");	
   initialize_spmv_buffer(A->n, 
                          A->nnz_unpacked,
                          A->csr_ia,
@@ -623,6 +661,18 @@ pdata * prec_data;
                                          prec_data->ua);
 
   }
+
+  if (strcmp(prec_data->prec_op, "ichol")  == 0) {
+
+  prec_data->ichol_vals = (double *) mallocForDevice (prec_data->ichol_vals,(A->nnz_unpacked), sizeof(double));
+  memcpyDevice(prec_data->ichol_vals, A->csr_vals,  A->nnz_unpacked,sizeof(double) , "D2D");
+ 
+     initialize_ichol(A->n, 
+                      A->nnz_unpacked, 
+                      A->csr_ia, 
+                      A->csr_ja, 
+                      prec_data->ichol_vals);
+}
 
 #if CUDA
   initialize_L_and_U_descriptors(A->n, 
