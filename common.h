@@ -3,10 +3,10 @@
 #include <stdlib.h>
 #pragma once
 
-#define NOACC 0
+#define NOACC 1
 #define CUDA 0
 #define OPENMP 0
-#define HIP 1
+#define HIP 0
 typedef struct{
  
   int *lia;

@@ -25,4 +25,14 @@ void simple_vec_copy(const int n, const double *src, double *dest);
 
 void simple_vec_zero(const int n, double *vec);
 
+void initialize_ichol(const int n, 
+                      const int nnzA, 
+                      int *ia, 
+                      int *ja, 
+                      double *a, 
+                      int *lia,
+                      int *lja,
+                      double *la);
+
+void simple_ichol(int *ia, int *ja, double *a, int nnzA, pdata* prec_data, double * x, double *y);
 #endif

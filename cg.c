@@ -54,9 +54,9 @@ void cg(int n, double nnz,
 printf("CG: it %d, res norm %5.5e \n",0, res_norm_history[0]);
 #if 1
 	while (notconv){
-		//printf("Norm of X before prec %16.16e \n", dot(n, r,r));  
+	//	printf("Norm of X before prec %16.16e \n", dot(n, r,r));  
 		prec_function(ia, ja, a, nnz, prec_data, r, w);
-		//printf("Norm of X after prec %16.16e \n", dot(n, w,w));  
+//		printf("Norm of X after prec %16.16e \n", dot(n, w,w));  
 		// rho_current = r'*w;
 		rho_current = dot(n, r, w);
 		if (iter == 0){

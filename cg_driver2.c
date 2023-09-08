@@ -25,6 +25,10 @@ double time_Symbolic = 0.0;
 #include "hip_blas.h"
 #include "devMem.h"
 #endif
+
+#if NOACC
+#include "simple_blas.h"
+#endif
 #define MAXIT 50000
 // needed for easy sorting
 struct indexPlusValue
@@ -505,6 +509,61 @@ int main(int argc, char *argv[])
 #endif 
   }//if
 #endif 
+  //same for ichol on the cpu
+#if NOACC || OPENMP
+  if (strcmp(prec_data->prec_op, "ichol")  == 0) {
+    printf("READJUSTING L and U \n");
+    int *  new_L_ja = (int *) calloc (L->nnz+L->n, sizeof(int));
+    int *  new_U_ja = (int *) calloc (U->nnz+U->n, sizeof(int));
+    double *  new_L_a = (double *) calloc (L->nnz+L->n, sizeof(double));
+    double * new_U_a = (double *) calloc (U->nnz+U->n, sizeof(double));
+
+    int c = 0;
+    for (int ii = 0; ii<L->n; ++ii){
+      for (int jj = L->csr_ia[ii]; jj<L->csr_ia[ii+1]; ++jj){
+        new_L_ja[c] = L->csr_ja[jj];
+        new_L_a[c] = L->csr_vals[jj];
+        c++;     
+      }
+      //diagonal element
+      new_L_ja[c] = ii;
+      new_L_a[c] = D->csr_vals[ii]; 
+      c++;  
+    }
+    c=0;
+    for (int ii=0; ii<U->n; ++ii){
+
+      //diagonal element
+      new_U_ja[c] = ii;
+      new_U_a[c] = D->csr_vals[ii]; 
+      c++;  
+      for (int jj=U->csr_ia[ii]; jj<U->csr_ia[ii+1]; ++jj){
+        new_U_ja[c] = U->csr_ja[jj];
+        new_U_a[c] = U->csr_vals[jj];
+        c++;     
+      }
+    }
+    //now shift row pointers
+    for (int ii=1; ii<=A->n; ++ii){
+      L->csr_ia[ii]+=ii;
+      U->csr_ia[ii]+=ii;
+    }
+    L->nnz+=A->n;
+    U->nnz+=A->n;
+
+    free(L->csr_ja);
+    free(L->csr_vals);
+
+    free(U->csr_ja);
+    free(U->csr_vals);
+    L->csr_ja = new_L_ja;
+    L->csr_vals = new_L_a;
+    U->csr_ja = new_U_ja;
+    U->csr_vals = new_U_a;
+  }//if
+#endif
+
+
 
   double *b = (double *) calloc (A->n, sizeof(double));
   if (argc >7) {//optional rhs file is given
@@ -527,7 +586,6 @@ int main(int argc, char *argv[])
   free(b);
   b=d_b;
 #endif
-
 #if 1
 #if 1
 
@@ -673,9 +731,8 @@ int main(int argc, char *argv[])
                      A->csr_ia, 
                      A->csr_ja, 
                      prec_data->ichol_vals);
-#endif
   }
-
+#endif
 #if CUDA
   initialize_L_and_U_descriptors(A->n, 
                                  prec_data->lnnz,
@@ -690,6 +747,18 @@ int main(int argc, char *argv[])
 #endif
 #else //NOT cuda nor hip
 
+  if (strcmp(prec_data->prec_op, "ichol")  == 0) {
+
+    printf("before ICHOL setup \n");
+    initialize_ichol(A->n, 
+                     U->nnz, 
+                     U->csr_ia, 
+                     U->csr_ja, 
+                     U->csr_vals,
+                     L->csr_ia, 
+                     L->csr_ja, 
+                     L->csr_vals);
+  }
   prec_data->lia = L->csr_ia;
   prec_data->lja = L->csr_ja;
   prec_data->la = L->csr_vals;
