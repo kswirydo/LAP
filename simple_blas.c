@@ -135,20 +135,63 @@ void initialize_ichol(const int n,
                       int *lja,
                       double *la)
 {
-  printf("ICHOL SETUP INPUT \n");  
+  //printf("ICHOL SETUP INPUT,n= %d \n", n);  
 
+//new version
+//
+  for (int i = 0; i < n; ++i) {
+    if (n>100000) {
+      if (i %100==0) printf("processing row: %d\n", i);
+    }
 
+    a[ia[i]] = sqrt(a[ia[i]]);
+    for (int m = ia[i] + 1; m < ia[i+1]; ++m){
+      a[m] = a[m]/a[ia[i]]; 
+    }
 
+    for (int m = ia[i] + 1; m < ia[i+1]; ++m){
+      for (int k = ia[ja[m]]; k < ia[ja[m]+1]; ++k){
+        for (int l = m; l < ia[i+1]; ++l){
+          if (ja[l] == ja[k]){
+            a[k]-= a[m]*a[l];
+          }//if 
+        }//loop with l
+      } //loop with k 
+    }//loop with m
+  }
+// at this point, what we have in (ia, ja, a) is CSR format of L^T (so the same as "U").
+// and we need L (also in CSR), so we have to transpose.
+
+  int * Lcounts = (int *) calloc (nnzA, sizeof(int));
+  for (int i = 0; i < n; ++i){
+    for (int j = ia[i]; j < ia[i+1]; ++j){
+      int row = ja[j];
+      double val = a[j];
+      la[lia[row]+Lcounts[row]] = val;
+      Lcounts[row]++;
+    } 
+  }
+free(Lcounts);
+ 
+#if 0
+ for (int i = 0; i<n; ++i) {
+    printf("This is row %d \n", i);
+    for (int j = ia[i]; j<ia[i+1]; ++j)
+    {
+      printf("(%d,  %f) ", ja[j], a[j]);
+    }
+    printf("\n");
+  } 
   // we assume A = (ia, ja, a) is UPPER TRIANGULAR
   // aux variables
   double * Lcol = (double *) calloc (n, sizeof(double));
   int * Lcounts = (int *) calloc (n, sizeof(int));
 
   for (int k = 0; k < n; ++k) {
-if (n>100000) {
-if (k %100==0) printf("processing row: %d\n", k);
-}
-    simple_vec_zero(n, Lcol);
+    if (n>100000) {
+      if (k %100==0) printf("processing row: %d\n", k);
+    }
+    //simple_vec_zero(n, Lcol);
     a[ia[k]] = sqrt(a[ia[k]]);
     for (int i = ia[k]+1; i<ia[k+1]; ++i){
       a[i] = a[i]/a[ia[k]]; 
@@ -164,6 +207,10 @@ if (k %100==0) printf("processing row: %d\n", k);
           a[idx] = a[idx] - Lcol[j]*Lcol[i];
         }
       }
+    }
+
+    for (int i = ia[k]+1; i<ia[k+1]; ++i){
+      Lcol[ja[i]] = 0.0;
     }
   }
   // now ia has the values, in upper triangular format
@@ -187,6 +234,7 @@ if (k %100==0) printf("processing row: %d\n", k);
     }
     printf("\n");
   } 
+#endif
 #endif
 }
 
