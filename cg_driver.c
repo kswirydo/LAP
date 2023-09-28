@@ -107,6 +107,10 @@ void read_mm_file(const char *matrixFileName, mmatrix *A)
     if ((c < 1) || (r < 1))
       printf("We have got A PROBLEM! %d %d %16.16f \n", r - 1, c - 1, val);
   }//while
+  //main diagonal of A is 0; but L = D-A  so it is not 0 in the Laplacian.
+  //this is done to avoid updating CSR pattern
+  for (int j=0; j<A->n; ++j){
+    A->coo_rows[i] = j;
     A->coo_cols[i] = j;
     A->coo_vals[i] = 1.0f;
     i++;
