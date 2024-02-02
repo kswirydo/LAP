@@ -1,53 +1,58 @@
 #include "simple_blas.h"
 #include "cuda_blas.h"
 #include "hip_blas.h"
-
-//extern "C" {
 #include "openmp_blas.h"
-//}
 #include "blas.h"
 #include "common.h"
+
 double dot (const int n, const double *v, const double *w){
   double d;
 #if NOACC
-  d = simple_dot (n,v,w);
+  d = simple_dot (n, v, w);
 #elif  CUDA
-  d = cuda_dot (n,v,w);
+  d = cuda_dot (n, v, w);
 #elif OPENMP
-  d = openmp_dot (n,v,w);
+  d = openmp_dot (n, v, w);
 #elif HIP
-  d = hip_dot (n,v,w);
+  d = hip_dot (n, v, w);
 #endif
   return d;
 }
 
-
 void axpy (const int n, const double alpha, double *x, double *y){
 #if NOACC
-  simple_axpy (n, alpha,x, y);
+  simple_axpy (n, alpha, x, y);
 #elif CUDA
-  cuda_axpy (n, alpha,x, y);
+  cuda_axpy (n, alpha, x, y);
 #elif OPENMP
-  openmp_axpy (n, alpha,x, y);
+  openmp_axpy (n, alpha, x, y);
 #elif HIP
-  hip_axpy (n, alpha,x, y);
+  hip_axpy (n, alpha, x, y);
 #endif
-
 }
 
 void scal (const int n, const double alpha, double *v){
 #if NOACC
-  simple_scal (n, alpha,v);
+  simple_scal (n, alpha, v);
 #elif CUDA
-  cuda_scal (n, alpha,v);
+  cuda_scal (n, alpha, v);
 #elif OPENMP
-  openmp_scal (n, alpha,v);
+  openmp_scal (n, alpha, v);
 #elif HIP
-  hip_scal (n, alpha,v);
+  hip_scal (n, alpha, v);
 #endif
 }
 
-void csr_matvec(const int n, const int nnz, const int *ia, const int *ja, const double *a, const double *x, double *result, const double *al, const double *bet,const char * kind){
+void csr_matvec(const int n, 
+                const int nnz, 
+                const int *ia, 
+                const int *ja, 
+                const double *a, 
+                const double *x, 
+                double *result, 
+                const double *al, 
+                const double *bet,
+                const char *kind){
 #if NOACC
   simple_csr_matvec(n, nnz, ia, ja, a, x, result, al, bet);
 #elif CUDA
@@ -59,7 +64,15 @@ void csr_matvec(const int n, const int nnz, const int *ia, const int *ja, const 
 #endif
 }
 
-void lower_triangular_solve(const int n, const int nnz, const int *lia, const int *lja, const double *la,const double * diag, const double *x, double *result){
+
+void lower_triangular_solve(const int n, 
+                            const int nnz, 
+                            const int *lia, 
+                            const int *lja, 
+                            const double *la,
+                            const double * diag, 
+                            const double *x, 
+                            double *result){
 #if NOACC
   simple_lower_triangular_solve(n, nnz, lia, lja, la, diag, x, result);
 #elif CUDA
@@ -71,22 +84,26 @@ void lower_triangular_solve(const int n, const int nnz, const int *lia, const in
 #endif
 }
 
-
-
-void upper_triangular_solve(const int n, const int nnz, const int *uia, const int *uja, const double *ua,const double *diag, const double *x, double *result){
+void upper_triangular_solve(const int n, 
+                            const int nnz, 
+                            const int *uia, 
+                            const int *uja, 
+                            const double *ua,
+                            const double *diag, 
+                            const double *x, 
+                            double *result){
 #if NOACC
-  simple_upper_triangular_solve(n, nnz, uia, uja, ua,diag, x, result);
+  simple_upper_triangular_solve(n, nnz, uia, uja, ua, diag, x, result);
 #elif CUDA
-  cuda_upper_triangular_solve(n, nnz, uia, uja, ua,diag, x, result);
+  cuda_upper_triangular_solve(n, nnz, uia, uja, ua, diag, x, result);
 #elif OPENMP
-  openmp_upper_triangular_solve(n, nnz, uia, uja, ua,diag, x, result);
+  openmp_upper_triangular_solve(n, nnz, uia, uja, ua, diag, x, result);
 #elif HIP
-  hip_upper_triangular_solve(n, nnz, uia, uja, ua,diag, x, result);
+  hip_upper_triangular_solve(n, nnz, uia, uja, ua, diag, x, result);
 #endif
 }
 
-
-void ichol(int *ia, int *ja, double *a, int nnzA, pdata* prec_data, double * x, double *y){
+void ichol(const int *ia, const int *ja, double *a, const int nnzA, pdata *prec_data, double *x, double *y){
 #if NOACC
   simple_ichol( ia, ja, a, nnzA, prec_data, x, y);
 #elif CUDA
@@ -98,7 +115,7 @@ void ichol(int *ia, int *ja, double *a, int nnzA, pdata* prec_data, double * x, 
 #endif
 }
 
-void vec_vec(const int n, const double * x, double * y, double *res){
+void vec_vec(const int n, const double *x, double *y, double *res){
 #if NOACC
   simple_vec_vec(n, x, y, res);
 #elif CUDA

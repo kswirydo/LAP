@@ -6,12 +6,12 @@
 
 static rocblas_handle handle_rocblas;
 static  rocsparse_handle  handle_rocsparse;
-static void * mv_buffer = NULL;
-static void * L_buffer;
-static void * U_buffer;
-static void * ichol_buffer;
+static void *mv_buffer = NULL;
+static void *L_buffer;
+static void *U_buffer;
+static void *ichol_buffer;
 
-static rocsparse_mat_descr matA=NULL;
+static rocsparse_mat_descr matA = NULL;
 static rocsparse_mat_descr descrL, descrU, descrA;
 static rocsparse_mat_descr descrLt; //for ICHOL
 static rocsparse_mat_info  infoL, infoU, infoLic, infoLtic;
@@ -41,6 +41,7 @@ void initialize_handles(){
   rocsparse_create_mat_info(&infoL);
   rocsparse_create_mat_info(&infoU);
 }
+
 void analyze_spmv(const int n, 
                   const int nnz, 
                   int *ia, 
@@ -50,9 +51,9 @@ void analyze_spmv(const int n,
                   double *result,
                   char * option
                  ){
-  //no buffer in matvec
+  /* no buffer in matvec */
   rocsparse_status status_rocsparse;
-  if (strcmp(option, "A") == 0)
+  if (strcmp(option, "A") == 0) {
     status_rocsparse = rocsparse_dcsrmv_analysis(handle_rocsparse,
                                                  rocsparse_operation_none,
                                                  n,
@@ -63,8 +64,9 @@ void analyze_spmv(const int n,
                                                  ia,
                                                  ja,
                                                  infoA);
+  }
 
-  if (strcmp(option, "L") == 0)
+  if (strcmp(option, "L") == 0) {
     status_rocsparse = rocsparse_dcsrmv_analysis(handle_rocsparse,
                                                  rocsparse_operation_none,
                                                  n,
@@ -75,8 +77,9 @@ void analyze_spmv(const int n,
                                                  ia,
                                                  ja,
                                                  infoL);
+  }
 
-  if (strcmp(option, "U") == 0)
+  if (strcmp(option, "U") == 0) {
     status_rocsparse = rocsparse_dcsrmv_analysis(handle_rocsparse,
                                                  rocsparse_operation_none,
                                                  n,
@@ -87,9 +90,11 @@ void analyze_spmv(const int n,
                                                  ia,
                                                  ja,
                                                  infoU);
+  }
 
-  if (status_rocsparse!=0)printf("mv analysis status for %s is %d \n", option, status_rocsparse);
-
+  if (status_rocsparse != 0) {
+    printf("mv analysis status for %s is %d \n", option, status_rocsparse);
+  }
 }
 
 void initialize_and_analyze_L_and_U_solve(const int n, 
@@ -105,6 +110,7 @@ void initialize_and_analyze_L_and_U_solve(const int n,
   size_t L_buffer_size;  
   size_t U_buffer_size;  
   rocsparse_status status_rocsparse;
+
   status_rocsparse = rocsparse_dcsrsv_buffer_size(handle_rocsparse, 
                                                   rocsparse_operation_none, 
                                                   n, 
@@ -115,7 +121,7 @@ void initialize_and_analyze_L_and_U_solve(const int n,
                                                   lja,
                                                   infoL, 
                                                   &L_buffer_size);
-  //printf("buffer size for L %d status %d \n", L_buffer_size, status_rocsparse);
+
   hipMalloc((void**)&(L_buffer), L_buffer_size);
 
   status_rocsparse = rocsparse_dcsrsv_buffer_size(handle_rocsparse, 
@@ -129,7 +135,7 @@ void initialize_and_analyze_L_and_U_solve(const int n,
                                                   infoU, 
                                                   &U_buffer_size);
   hipMalloc((void**)&(U_buffer), U_buffer_size);
-  //printf("buffer size for U %d status %d \n", U_buffer_size, status_rocsparse);
+
   status_rocsparse = rocsparse_dcsrsv_analysis(handle_rocsparse, 
                                                rocsparse_operation_none,
                                                n,
@@ -142,7 +148,10 @@ void initialize_and_analyze_L_and_U_solve(const int n,
                                                rocsparse_analysis_policy_reuse,
                                                rocsparse_solve_policy_auto,
                                                L_buffer);
-  if (status_rocsparse!=0)printf("status after analysis 1 %d \n", status_rocsparse);
+  if (status_rocsparse != 0) {
+    printf("status after analysis 1 %d \n", status_rocsparse);
+  }
+
   status_rocsparse = rocsparse_dcsrsv_analysis(handle_rocsparse, 
                                                rocsparse_operation_none, 
                                                n,
@@ -155,9 +164,10 @@ void initialize_and_analyze_L_and_U_solve(const int n,
                                                rocsparse_analysis_policy_reuse,
                                                rocsparse_solve_policy_auto,
                                                U_buffer);
-  if (status_rocsparse!=0)printf("status after analysis 2 %d \n", status_rocsparse);
+  if (status_rocsparse != 0) {
+    printf("status after analysis 2 %d \n", status_rocsparse);
+  }
 }
-
 
 void initialize_ichol(const int n, 
                       const int nnzA, 
@@ -165,33 +175,34 @@ void initialize_ichol(const int n,
                       int *ja, 
                       double *a)
 {
-  printf("initializing ICHOLi, n = %d, nnzA = %d \n",n,nnzA);
-  // Create matrix descriptor for M
+  // printf("initializing ICHOLi, n = %d, nnzA = %d \n",n,nnzA);
+  /* Create matrix descriptor for M */
   rocsparse_status status_rocsparse;
   rocsparse_create_mat_descr(&descrM);
   rocsparse_set_mat_type(descrM, rocsparse_matrix_type_general);
-  
-  // Create matrix descriptor for L
+
+  /* Create matrix descriptor for L */
   rocsparse_create_mat_descr(&descrLic);
   rocsparse_set_mat_fill_mode(descrLic, rocsparse_fill_mode_lower);
   rocsparse_set_mat_diag_type(descrLic, rocsparse_diag_type_non_unit);
   rocsparse_set_mat_index_base(descrLic, rocsparse_index_base_zero);
 
-  // Create matrix descriptor for L'
+  /* Create matrix descriptor for L' */
   rocsparse_create_mat_descr(&descrLtic);
   rocsparse_set_mat_fill_mode(descrLtic, rocsparse_fill_mode_upper);
   rocsparse_set_mat_diag_type(descrLtic, rocsparse_diag_type_non_unit);
   rocsparse_set_mat_index_base(descrLtic, rocsparse_index_base_zero);
 
-  // Create matrix info structure
+  /* Create matrix info structure */
   rocsparse_create_mat_info(&infoM);
   rocsparse_create_mat_info(&infoLic);
   rocsparse_create_mat_info(&infoLtic);
 
-  // Obtain required buffer size
+  /* Obtain required buffer size */
   size_t buffer_size_M;
   size_t buffer_size_L;
   size_t buffer_size_Lt;
+
   rocsparse_dcsric0_buffer_size(handle_rocsparse,
                                 n,
                                 nnzA,
@@ -201,6 +212,7 @@ void initialize_ichol(const int n,
                                 ja,
                                 infoM,
                                 &buffer_size_M);
+
   rocsparse_dcsrsv_buffer_size(handle_rocsparse,
                                rocsparse_operation_none,
                                n,
@@ -211,6 +223,7 @@ void initialize_ichol(const int n,
                                ja,
                                infoM,
                                &buffer_size_L);
+
   rocsparse_dcsrsv_buffer_size(handle_rocsparse,
                                rocsparse_operation_transpose,
                                n,
@@ -221,31 +234,18 @@ void initialize_ichol(const int n,
                                ja,
                                infoM,
                                &buffer_size_Lt);
-  printf("Buffer sizes: %d %d %d \n", buffer_size_M, buffer_size_L, buffer_size_Lt);
+  // printf("Buffer sizes: %d %d %d \n", buffer_size_M, buffer_size_L, buffer_size_Lt);
   size_t buffer_size = max(buffer_size_M, max(buffer_size_L, buffer_size_Lt));
-printf("finalsize %d \n",buffer_size);
+  // printf("finalsize %d \n",buffer_size);
   // Allocate temporary buffer
   hipMalloc(&ichol_buffer, buffer_size);
 
-  // Perform analysis steps, using rocsparse_analysis_policy_reuse to improve
-  // computation performance
-  status_rocsparse =	rocsparse_dcsric0_analysis(handle_rocsparse,
-                                                 n,
-                                                 nnzA,
-                                                 descrM,
-                                                 a,
-                                                 ia,
-                                                 ja,
-                                                 infoM,
-                                                 rocsparse_analysis_policy_reuse,
-                                                 rocsparse_solve_policy_auto,
-                                                 ichol_buffer);
-  printf("status 0: %d \n", status_rocsparse);
-  status_rocsparse =	rocsparse_dcsrsv_analysis(handle_rocsparse,
-                                                rocsparse_operation_none,
+  /* Perform analysis steps, using rocsparse_analysis_policy_reuse to improve 
+   * computation performance */
+  status_rocsparse = rocsparse_dcsric0_analysis(handle_rocsparse,
                                                 n,
                                                 nnzA,
-                                                descrLic,
+                                                descrM,
                                                 a,
                                                 ia,
                                                 ja,
@@ -253,31 +253,43 @@ printf("finalsize %d \n",buffer_size);
                                                 rocsparse_analysis_policy_reuse,
                                                 rocsparse_solve_policy_auto,
                                                 ichol_buffer);
-  printf("status 1: %d \n", status_rocsparse);
-  status_rocsparse =	rocsparse_dcsrsv_analysis(handle_rocsparse,
-                                                rocsparse_operation_transpose,
-                                                n,
-                                                nnzA,
-                                                descrLic,
-                                                a,
-                                                ia,
-                                                ja,
-                                                infoM,
-                                                rocsparse_analysis_policy_reuse,
-                                                rocsparse_solve_policy_auto,
-                                                ichol_buffer);
-  printf("status 2: %d \n", status_rocsparse);
+  // printf("status 0: %d \n", status_rocsparse);
+  status_rocsparse = rocsparse_dcsrsv_analysis(handle_rocsparse,
+                                               rocsparse_operation_none,
+                                               n,
+                                               nnzA,
+                                               descrLic,
+                                               a,
+                                               ia,
+                                               ja,
+                                               infoM,
+                                               rocsparse_analysis_policy_reuse,
+                                               rocsparse_solve_policy_auto,
+                                               ichol_buffer);
+  // printf("status 1: %d \n", status_rocsparse);
+  status_rocsparse = rocsparse_dcsrsv_analysis(handle_rocsparse,
+                                               rocsparse_operation_transpose,
+                                               n,
+                                               nnzA,
+                                               descrLic,
+                                               a,
+                                               ia,
+                                               ja,
+                                               infoM,
+                                               rocsparse_analysis_policy_reuse,
+                                               rocsparse_solve_policy_auto,
+                                               ichol_buffer);
+  // printf("status 2: %d \n", status_rocsparse);
 
-  // Check for zero pivot
+  /* Check for zero pivot */
   rocsparse_int position;
-  if(rocsparse_status_zero_pivot == rocsparse_csric0_zero_pivot(handle_rocsparse,
-                                                                infoM,
-                                                                &position))
-  {
+  if (rocsparse_status_zero_pivot == rocsparse_csric0_zero_pivot(handle_rocsparse,
+                                                                 infoM,
+                                                                 &position)) {
     printf("A has structural zero at A(%d,%d)\n", position, position);
   }
 
-  // Compute incomplete Cholesky factorization M = LL'
+  /* Compute incomplete Cholesky factorization M = LL' */
   status_rocsparse =	rocsparse_dcsric0(handle_rocsparse,
                                         n,
                                         nnzA,
@@ -288,13 +300,12 @@ printf("finalsize %d \n",buffer_size);
                                         infoM,
                                         rocsparse_solve_policy_auto,
                                         ichol_buffer);
-  printf("status 3: %d \n", status_rocsparse);
+  // printf("status 3: %d \n", status_rocsparse);
 
-  // Check for zero pivot
-  if(rocsparse_status_zero_pivot == rocsparse_csric0_zero_pivot(handle_rocsparse,
-                                                                infoM,
-                                                                &position))
-  {
+  /* Check for zero pivot */
+  if (rocsparse_status_zero_pivot == rocsparse_csric0_zero_pivot(handle_rocsparse,
+                                                                 infoM,
+                                                                 &position)) {
     printf("L has structural and/or numerical zero at L(%d,%d)\n",
            position,
            position);
@@ -302,7 +313,7 @@ printf("finalsize %d \n",buffer_size);
 }
 
 
-void hip_ichol(int *ia, int *ja, double *a, int nnzA, pdata* prec_data, double * x, double *y)
+void hip_ichol(int *ia, int *ja, double *a, int nnzA, pdata *prec_data, double * x, double *y)
 {
   double one = 1.0;
   rocsparse_status st;
@@ -312,7 +323,7 @@ void hip_ichol(int *ia, int *ja, double *a, int nnzA, pdata* prec_data, double *
                               nnzA,
                               &one,
                               descrLic,
-                               prec_data->ichol_vals,
+                              prec_data->ichol_vals,
                               ia,
                               ja,
                               infoM,
@@ -321,23 +332,27 @@ void hip_ichol(int *ia, int *ja, double *a, int nnzA, pdata* prec_data, double *
                               rocsparse_solve_policy_auto,
                               ichol_buffer);
 
-  if (st!=0) printf("before L^T solve: norm of input %16.16e, norm of output %16.16e\n", hip_dot (prec_data->n, prec_data->aux_vec1, prec_data->aux_vec1), hip_dot (prec_data->n, y, y) );
-  // Solve L'y = z
-  st =	rocsparse_dcsrsv_solve(handle_rocsparse,
-                               rocsparse_operation_transpose,
-                               prec_data->n,
-                               nnzA,
-                               &one,
-                               descrLic,
-                               prec_data->ichol_vals,
-                               ia,
-                               ja,
-                               infoM,
-                               prec_data->aux_vec1, 
-                               y, 
-                               rocsparse_solve_policy_auto,
-                               ichol_buffer);
-  if (st!=0) printf("status L^T solve: %d \n", st);
+  if (st != 0) {
+    printf("before L^T solve: norm of input %16.16e, norm of output %16.16e\n", hip_dot (prec_data->n, prec_data->aux_vec1, prec_data->aux_vec1), hip_dot (prec_data->n, y, y) );
+  } 
+  /* Solve L'y = z */
+  st = rocsparse_dcsrsv_solve(handle_rocsparse,
+                              rocsparse_operation_transpose,
+                              prec_data->n,
+                              nnzA,
+                              &one,
+                              descrLic,
+                              prec_data->ichol_vals,
+                              ia,
+                              ja,
+                              infoM,
+                              prec_data->aux_vec1, 
+                              y, 
+                              rocsparse_solve_policy_auto,
+                              ichol_buffer);
+  if (st != 0) {
+    printf("status L^T solve: %d \n", st);
+  }
 }
 
 __global__ void hip_vec_vec_kernel(const int n,
@@ -345,8 +360,8 @@ __global__ void hip_vec_vec_kernel(const int n,
                                    const double *y,
                                    double *z){
   int idx = blockIdx.x * blockDim.x + threadIdx.x; 
-  while (idx < n){
-    z[idx] =  x[idx]*y[idx];
+  while (idx < n) {
+    z[idx] = x[idx] * y[idx];
 
     idx += blockDim.x * gridDim.x;
   }
@@ -356,9 +371,12 @@ __global__ void hip_vec_reciprocal_kernel(const int n,
                                           const double *x,
                                           double *z){
   int idx = blockIdx.x * blockDim.x + threadIdx.x; 
-  while (idx < n){
-    if  (x[idx] != 0.0 ){z[idx] = 1.0f/x[idx];}
-    else z[idx] = 0.0f;
+  while (idx < n) {
+    if  (x[idx] != 0.0){ 
+      z[idx] = 1.0 / x[idx];
+    } else { 
+      z[idx] = 0.0;
+    }
 
     idx += blockDim.x * gridDim.x;
   }
@@ -368,25 +386,29 @@ __global__ void hip_vec_sqrt_kernel(const int n,
                                     const double *x,
                                     double *z){
   int idx = blockIdx.x * blockDim.x + threadIdx.x; 
-  while (idx < n){
-    if (x[idx]>0)
-      z[idx] =  sqrt(x[idx]);
-    else z[idx] =0.0;
+  while (idx < n) {
+    if (x[idx] > 0) {
+      z[idx] = sqrt(x[idx]);
+    } else {
+      z[idx] = 0.0;
+    }
 
     idx += blockDim.x * gridDim.x;
   }
 }
 
 
-__global__ void hip_vec_set_kernel(const int n, double value,
-                                    double *x){
+__global__ void hip_vec_set_kernel(const int n, 
+                                   double value,
+                                   double *x){
   int idx = blockIdx.x * blockDim.x + threadIdx.x; 
   while (idx < n){
-    x[idx] =  value;
+    x[idx] = value;
 
     idx += blockDim.x * gridDim.x;
   }
 }
+
 __global__ void hip_vec_zero_kernel(const int n,
                                     double *x){
   int idx = blockIdx.x * blockDim.x + threadIdx.x; 
@@ -416,7 +438,6 @@ void hip_scal (const int n, const double alpha, double *v){
                 &alpha,
                 v, 
                 1);
-
 }
 
 void hip_axpy (const int n, const double alpha, const double *x, double *y){
@@ -427,44 +448,56 @@ void hip_axpy (const int n, const double alpha, const double *x, double *y){
                 1,
                 y, 
                 1);
-
 }
 
-void hip_csr_matvec(const int n, const int nnz, const int *ia, const int *ja, const double *a, const double *x, double *result, const double*al, const double *bet, const char * kind){
-  // y = alpha *A* x + beta *y 
+void hip_csr_matvec(const int n, 
+                    const int nnz, 
+                    const int *ia, 
+                    const int *ja, 
+                    const double *a, 
+                    const double *x, 
+                    double *result, 
+                    const double *al, 
+                    const double *bet, 
+                    const char *kind){
+  /* y = alpha *A* x + beta *y */
   rocsparse_status st;
-  if (strcmp(kind, "A") == 0)
-    st= rocsparse_dcsrmv(handle_rocsparse,
-                         rocsparse_operation_none,
-                         n,
-                         n,
-                         nnz,
-                         al,
-                         descrA,
-                         a,
-                         ia,
-                         ja,
-                         infoA,
-                         x,
-                         bet,
-                         result);
-  if (strcmp(kind, "L") == 0)
-    st= rocsparse_dcsrmv(handle_rocsparse,
-                         rocsparse_operation_none,
-                         n,
-                         n,
-                         nnz,
-                         al,
-                         descrL,
-                         a,
-                         ia,
-                         ja,
-                         infoL,
-                         x,
-                         bet,
-                         result);
-  if (strcmp(kind, "U") == 0)
-    st= rocsparse_dcsrmv(handle_rocsparse,
+  if (strcmp(kind, "A") == 0) {
+    st = rocsparse_dcsrmv(handle_rocsparse,
+                          rocsparse_operation_none,
+                          n,
+                          n,
+                          nnz,
+                          al,
+                          descrA,
+                          a,
+                          ia,
+                          ja,
+                          infoA,
+                          x,
+                          bet,
+                          result);
+  } 
+
+  if (strcmp(kind, "L") == 0) {
+    st = rocsparse_dcsrmv(handle_rocsparse,
+                          rocsparse_operation_none,
+                          n,
+                          n,
+                          nnz,
+                          al,
+                          descrL,
+                          a,
+                          ia,
+                          ja,
+                          infoL,
+                          x,
+                          bet,
+                          result);
+  }
+
+  if (strcmp(kind, "U") == 0) {
+    st = rocsparse_dcsrmv(handle_rocsparse,
                          rocsparse_operation_none,
                          n,
                          n,
@@ -478,15 +511,23 @@ void hip_csr_matvec(const int n, const int nnz, const int *ia, const int *ja, co
                          x,
                          bet,
                          result);
-  //printf("status after mv: %d\n", st);
+  }
+  // printf("status after mv: %d\n", st);
 }
 
-void hip_lower_triangular_solve(const int n, const int nnzL, const int *lia, const int *lja, const double *la,const double *diagonal, const double *x, double *result){
-  //compute result = L^{-1}x 
-  ////we DO NOT assume anything about L diagonal
-  //go thr
-  //d_x3 = L^(-1)dx2
+void hip_lower_triangular_solve(const int n,
+                                const int nnzL, 
+                                const int *lia, 
+                                const int *lja, 
+                                const double *la,
+                                const double *diagonal, 
+                                const double *x, 
+                                double *result){
+  /* compute result = L^{-1}x */
+  /* we DO NOT assume anything about L diagonal */
+  /* d_x3 = L^(-1)dx2 */
   double one = 1.0;
+
   rocsparse_dcsrsv_solve(handle_rocsparse, 
                          rocsparse_operation_none,
                          n,
@@ -503,9 +544,15 @@ void hip_lower_triangular_solve(const int n, const int nnzL, const int *lia, con
                          L_buffer);
 }
 
-
-void hip_upper_triangular_solve(const int n, const int nnzU, const int *uia, const int *uja, const double *ua, const double *diagonal, const double *x, double *result){
-  //compute result = U^{-1}x 
+void hip_upper_triangular_solve(const int n, 
+                                const int nnzU, 
+                                const int *uia, 
+                                const int *uja, 
+                                const double *ua, 
+                                const double *diagonal, 
+                                const double *x, 
+                                double *result){
+  /* compute result = U^{-1}x */
   double one = 1.0;
   rocsparse_dcsrsv_solve(handle_rocsparse, 
                          rocsparse_operation_none,
@@ -523,43 +570,35 @@ void hip_upper_triangular_solve(const int n, const int nnzU, const int *uia, con
                          U_buffer);
 }
 
-//not std blas but needed and embarassingly parallel 
+/* not std blas but needed and embarassingly parallel */ 
 
-//cuda vec-vec computes an element-wise product (needed for scaling)
-//
-void hip_vec_vec(const int n, const double * x, const double * y, double *res){
+/* hip vec-vec computes an element-wise product (needed for scaling) */
 
-  hipLaunchKernelGGL(hip_vec_vec_kernel, dim3(n/1024+1), dim3(1024),0,0,n, x, y, res);
+void hip_vec_vec(const int n, const double *x, const double *y, double *res){
+  hipLaunchKernelGGL(hip_vec_vec_kernel, dim3(n / 1024 + 1), dim3(1024), 0, 0, n, x, y, res);
 }
 
-//vector reciprocal computes 1./d 
-//
+/*vector reciprocal computes 1./d */ 
 
 void hip_vector_reciprocal(const int n, const double *v, double *res){
-
-  hipLaunchKernelGGL( hip_vec_reciprocal_kernel,dim3(n/1024+1), dim3(1024),0,0,n, v, res);
+  hipLaunchKernelGGL( hip_vec_reciprocal_kernel,dim3(n / 1024 + 1), dim3(1024), 0, 0, n, v, res);
 }
 
 //vector sqrt takes an sqrt from each vector entry 
 
-
 void hip_vector_sqrt(const int n, const double *v, double *res){
-
   hipLaunchKernelGGL(hip_vec_sqrt_kernel, dim3(n), dim3(1024), 0,0,n, v, res);
 }
 
 void hip_vec_copy(const int n, const double *src, double *dest){
-
   hipMemcpy(dest, src, sizeof(double) * n, hipMemcpyDeviceToDevice);
 }
 
 
 void hip_vec_set(const int n, double value, double *vec){
-
   hipLaunchKernelGGL(hip_vec_set_kernel,dim3(n), dim3(1024), 0, 0, n, value, vec);
 }
+
 void hip_vec_zero(const int n, double *vec){
-
-  hipLaunchKernelGGL(hip_vec_zero_kernel,dim3(n), dim3(1024), 0, 0,n, vec);
+  hipLaunchKernelGGL(hip_vec_zero_kernel,dim3(n), dim3(1024), 0, 0, n, vec);
 }
-

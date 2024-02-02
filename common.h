@@ -1,26 +1,27 @@
 #include<math.h>
 #include<stdio.h>
 #include <stdlib.h>
+
 #pragma once
 
 #define NOACC 1
 #define CUDA 0
 #define OPENMP 0
 #define HIP 0
+
 typedef struct{
  
   int *lia;
   int *lja;
   double *la;
   int lnnz; 
-
  
   int *uia;
   int *uja;
   double *ua;
   int unnz;
 
-  double * ichol_vals;
+  double *ichol_vals;
   double *d;
   double *d_r;//d_r = 1./d
   int n;
@@ -33,7 +34,6 @@ typedef struct{
 
 void prec_function(int *ia, int *ja, double *a, int nnzA,pdata* prec_data, double * x, double *y);
 
-
 void cg(int n, double nnz,
         int *ia, //matrix csr data
         int *ja,
@@ -41,13 +41,14 @@ void cg(int n, double nnz,
         double *x, //solution vector, mmust be alocated prior to calling
         double *b, //rhs
         double tol, //DONT MULTIPLY BY NORM OF B
-        pdata * prec_data, //preconditioner data: all Ls, Us etc
+        pdata *prec_data, //preconditioner data: all Ls, Us etc
         int maxit,
         int *it, //output: iteration
         int *flag, //output: flag 0-converged, 1-maxit reached, 2-catastrophic failure
-        double * res_norm_history //output: residual norm history
+        double *res_norm_history //output: residual norm history
        );
 
+/* preconditioners */
 
 void GS_std(int *ia, int *ja, double *a, int nnzA,  pdata* prec_data, double *vec_in, double *vec_out);
 void GS_it(int *ia, int *ja, double *a, int nnzA,  pdata* prec_data, double *vec_in, double *vec_out);

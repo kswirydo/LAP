@@ -1,5 +1,3 @@
-//prototypes
-//
 #include "common.h"
 #include <omp.h>
 //#ifndef OMPBLAS_H
@@ -11,13 +9,35 @@ void openmp_scal (const int n, const double alpha, double *v);
 
 void openmp_axpy (const int n, const double alpha, const double *x, double *y);
 
-void openmp_csr_matvec(const int n, const int nnz, const int *ia, const int *ja, const double *a, const double *x, double *result, const  double*al, const double *bet);
+void openmp_csr_matvec(const int n, 
+                       const int nnz, 
+                       const int *ia, 
+                       const int *ja, 
+                       const double *a, 
+                       const double *x, 
+                       double *result, 
+                       const  double *al, 
+                       const double *bet);
 
-void openmp_lower_triangular_solve(const int n, const int nnz, const int *lia, const int *lja, const double  *la,const double * diag, const double *x, double *result);
+void openmp_lower_triangular_solve(const int n, 
+                                   const int nnz, 
+                                   const int *lia, 
+                                   const int *lja, 
+                                   const double *la,
+                                   const double *diag, 
+                                   const double *x, 
+                                   double *result);
 
-void openmp_upper_triangular_solve(const int n, const int nnz, const int *uia, const int *uja, const double *ua, const double * diag,const double *x, double *result);
+void openmp_upper_triangular_solve(const int n, 
+                                   const int nnz, 
+                                   const int *uia, 
+                                   const int *uja, 
+                                   const double *ua, 
+                                   const double *diag,
+                                   const double *x, 
+                                   double *result);
 
-void openmp_vec_vec(const int n, const double * x, const double * y, double *res);
+void openmp_vec_vec(const int n, const double *x, const double *y, double *res);
 
 void openmp_vector_sqrt(const int n, const double *v, double *res);
 
