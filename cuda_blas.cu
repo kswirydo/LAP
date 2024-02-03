@@ -329,8 +329,13 @@ void initialize_ichol(const int n,
 }
 
 
-void cuda_ichol(int *ia, int *ja, double *a, int nnzA, pdata* prec_data, double * x, double *y)
-{
+void cuda_ichol(const int *ia, 
+                const int *ja, 
+                double *a, 
+                const int nnzA,
+                pdata *prec_data, 
+                double *x, 
+                double *y) {
   double one = 1.0;
   cusparseDcsrsv2_solve(handle_cusparse, 
                         CUSPARSE_OPERATION_NON_TRANSPOSE, 

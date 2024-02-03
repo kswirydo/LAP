@@ -86,11 +86,11 @@ void initialize_ichol(const int n,
                       int *ja, 
                       double *a);
 
-void cuda_ichol(int *ia, 
-                int *ja, 
+void cuda_ichol(const int *ia, 
+                const int *ja, 
                 double *a, 
-                int nnzA, 
-                pdata* prec_data, 
+                const int nnzA, 
+                pdata *prec_data, 
                 double *x, 
                 double *y);
 #endif
