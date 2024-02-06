@@ -41,6 +41,7 @@ typedef struct
 } mmatrix;
 
 void read_mm_file(const char *matrixFileName, mmatrix *A);
+void read_adjacency_file(const char *matrixFileName, mmatrix *A); 
 void coo_to_csr(mmatrix *A);
 void read_rhs(const char *rhsFileName, double *rhs);
 void split(mmatrix *A, mmatrix *L, mmatrix *U, mmatrix *D);

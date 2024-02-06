@@ -11,24 +11,25 @@
 
 /* read the matrix (into UNSORTER COO) */
 
-void read_mm_file(const char *matrixFileName, mmatrix *A) {
-  /* this reads triangular matrix and expands into full as it goes (important) */
-  /* if matrix is "general" no expansion is done */
+void read_mm_file(const char *matrixFileName, mmatrix *A) 
+{
+  /* this reads triangular matrix or general matrix  */
   int noVals = 0;
-  bool sym = 1;
+  bool sym = 0;
   FILE *fpm = fopen(matrixFileName, "r");
 
   char lineBuffer[256];
   /* first line, should start with "%%" */
   fgets(lineBuffer, sizeof(lineBuffer), fpm);
- 
+
   char *s = strstr(lineBuffer, "pattern");
   if (s != NULL) {
     noVals = 1;
   } 
-  
+
+  s = strstr(lineBuffer, "symmetric");
   if (s != NULL) {
-    sym = 0;
+    sym = 1;
   } 
   A->symmetric = sym; 
 
@@ -40,13 +41,13 @@ void read_mm_file(const char *matrixFileName, mmatrix *A) {
   /* first line is size and nnz, need this info to allocate memory */
   sscanf(lineBuffer, "%ld %ld %ld", &(A->n), &(A->m), &(A->nnz));
   // printf("Matrix size: %d x %d, nnz %d \n",A->n, A->m, A->nnz );
-  
+
   /* allocate */
 
   A->coo_vals = (double *) calloc(A->nnz, sizeof(double));
-  A->coo_rows = (int *) calloc(A->nnz, sizeof(int));
-  A->coo_cols = (int *) calloc(A->nnz, sizeof(int));
-  
+  A->coo_rows = (int *)    calloc(A->nnz, sizeof(int));
+  A->coo_cols = (int *)    calloc(A->nnz, sizeof(int));
+
   /* read */
 
   int r, c;
@@ -71,9 +72,69 @@ void read_mm_file(const char *matrixFileName, mmatrix *A) {
   fclose(fpm);
 }
 
-/* COO to CSR */
+/* read adjacency matrix and make it into (unweighted) graph Laplacian*/
 
-void coo_to_csr(mmatrix *A) {
+void read_adjacency_file(const char *matrixFileName, mmatrix *A) 
+{
+
+  int noVals = 0;
+  FILE *fpm = fopen(matrixFileName, "r");
+
+  char lineBuffer[256];
+  /* first line, should start with "%%" */
+
+  fgets(lineBuffer, sizeof(lineBuffer), fpm);
+  char *s = strstr(lineBuffer, "pattern");
+  if (s != NULL) { 
+    noVals = 1;
+  }
+  A->symmetric = 1; /* adjacency matrix is symmetric unless hypergraph */ 
+  while (lineBuffer[0] == '%') { 
+    fgets(lineBuffer, sizeof(lineBuffer), fpm);
+  }
+
+  /* first line is size and nnz, need this info to allocate memory */
+  sscanf(lineBuffer, "%ld %ld %ld", &(A->n), &(A->m), &(A->nnz));
+
+  /* allocate - note extra space for diagonal!*/
+  A->coo_vals = (double *) calloc(A->nnz + A->n, sizeof(double));
+  A->coo_rows = (int *)    calloc(A->nnz + A->n, sizeof(int));
+  A->coo_cols = (int *)    calloc(A->nnz + A->n, sizeof(int));
+
+  int r, c;
+  double val;
+  int i = 0;
+  while (fgets(lineBuffer, sizeof(lineBuffer), fpm) != NULL)
+  {
+    if (noVals == 0){
+      sscanf(lineBuffer, "%d %d %lf", &r, &c, &val);
+      A->coo_vals[i] = val;
+    } else {
+      sscanf(lineBuffer, "%d %d", &r, &c);
+      A->coo_vals[i] = 1.0;
+    }    
+
+    A->coo_rows[i] = r - 1;
+    A->coo_cols[i] = c - 1;
+    i++;
+    if ((c < 1) || (r < 1))
+      printf("We have got A PROBLEM! %d %d %16.16f \n", r - 1, c - 1, val);
+  } /* while */
+  /* main diagonal of A is 0; but L = D - A  so it is not 0 in the Laplacian.*/
+  /* this is done to avoid updating CSR pattern */
+  for (int j = 0; j < A->n; ++j) {
+    A->coo_rows[i] = j;
+    A->coo_cols[i] = j;
+    A->coo_vals[i] = 1.0;
+    i++;
+  } 
+  A->nnz += A->n;
+  fclose(fpm);
+}
+
+/* COO to CSR */
+void coo_to_csr(mmatrix *A) 
+{
   /* first, decide how many nnz we have in each row */
   int *nnz_counts;
   nnz_counts = (int *) calloc(A->n, sizeof(int));
@@ -86,16 +147,15 @@ void coo_to_csr(mmatrix *A) {
       nnz_unpacked++;
     }
   }
-  
+
   /* allocate full CSR structure */
   A->nnz_unpacked = nnz_unpacked;
-  printf("original nnz: %d unpacked nnz %d \n", A->nnz, A->nnz_unpacked);
-  
+
   A->csr_vals = (double *) calloc(A->nnz_unpacked, sizeof(double));
   A->csr_ja = (int *) calloc(A->nnz_unpacked, sizeof(int));
   A->csr_ia = (int *) calloc((A->n) + 1, sizeof(int));
   indexPlusValue *tmp = (indexPlusValue *) calloc(A->nnz_unpacked, sizeof(indexPlusValue));
-  
+
   /* create IA (row pointers) */
   A->csr_ia[0] = 0;
   for (int i = 1; i < A->n + 1; ++i) {
@@ -112,7 +172,7 @@ void coo_to_csr(mmatrix *A) {
     if ((start + nnz_shifts[r]) > A->nnz_unpacked) {
       printf("index out of bounds\n");
     }
-    
+
     tmp[start + nnz_shifts[r]].idx = A->coo_cols[i];
     tmp[start + nnz_shifts[r]].value = A->coo_vals[i];
 
@@ -126,13 +186,13 @@ void coo_to_csr(mmatrix *A) {
       if ((start + nnz_shifts[r]) > A->nnz_unpacked) {
         printf("index out of boubns 2\n");
       }
-      
+
       tmp[start + nnz_shifts[r]].idx = A->coo_rows[i];
       tmp[start + nnz_shifts[r]].value = A->coo_vals[i];
       nnz_shifts[r]++;
     }
   }
-  //now sort whatever is inside rows
+  /* now sort whatever is inside rows */
 
   for (int i = 0; i < A->n; ++i)
   {
@@ -198,11 +258,12 @@ void read_rhs(const char *rhsFileName, double *rhs) {
 
 /* Split matrix A = L + U + D */
 
-void split(mmatrix *A, mmatrix *L, mmatrix *U, mmatrix *D) {
+void split(mmatrix *A, mmatrix *L, mmatrix *U, mmatrix *D) 
+{
   /* we need access to L, U, and D explicitely
    * we need degree of every row
    * allocate L and U bits and pieces; */
-  
+
   L->csr_ia = (int *) calloc (A->n + 1, sizeof(int));
   U->csr_ia = (int *) calloc (A->n + 1, sizeof(int));
   D->csr_ia = (int *) calloc (A->n + 1, sizeof(int));
@@ -216,18 +277,9 @@ void split(mmatrix *A, mmatrix *L, mmatrix *U, mmatrix *D) {
   U->csr_vals = (double *) calloc (A->nnz - A->n, sizeof(double));
   D->csr_vals = (double *) calloc (A->n, sizeof(double));
 
-  int *DD = (int*) calloc(A->n, sizeof(int));
-  int iu =0, il=0;
+  int iu = 0, il = 0;
   int col;
-  for (int i = 0; i < A->n; ++i) { 
-    DD[i] = -1.0; //dont count yourself
-    for (int j = A->csr_ia[i]; j < A->csr_ia[i + 1]; ++j) {
-      DD[i] += A->csr_vals[j];
-    }  
-  }
-  // printf("vertex %d has degree %d \n", i, DD[i]);
-  
-  double Dsqrt;
+
   for (int i = 0; i < A->n; ++i) {
     L->csr_ia[i] = il;
     U->csr_ia[i] = iu;
@@ -304,16 +356,17 @@ void split(mmatrix *A, mmatrix *L, mmatrix *U, mmatrix *D) {
 }
 
 /* create LAPLACIAN out of ADJACENCY matrix */ 
-void create_L_and_split(mmatrix *A, mmatrix *L, mmatrix *U, mmatrix *D, int weighted) {
+
+void create_L_and_split(mmatrix *A, mmatrix *L, mmatrix *U, mmatrix *D, int weighted) 
+{
   /* we need access to L, U, and D explicitely, not only to the Laplacian
-   * w decides whether weighted (w=1) or not (w=0)
+   * w decides whether weighted (w == 1) or not (w == 0)
    * we need degree of every row */
 
   /* allocate L and U bits and pieces; */
   L->csr_ia = (int *) calloc (A->n + 1, sizeof(int));
   U->csr_ia = (int *) calloc (A->n + 1, sizeof(int));
   D->csr_ia = (int *) calloc (A->n + 1, sizeof(int));
-
 
   L->csr_ja = (int *) calloc (A->nnz - A->n, sizeof(int));
   U->csr_ja = (int *) calloc (A->nnz - A->n, sizeof(int));
@@ -324,7 +377,7 @@ void create_L_and_split(mmatrix *A, mmatrix *L, mmatrix *U, mmatrix *D, int weig
   U->csr_vals = (double *) calloc (A->nnz - A->n, sizeof(double));
   D->csr_vals = (double *) calloc (A->n, sizeof(double));
 
-  int *DD = (int*) calloc(A->n, sizeof(int));
+  int *DD = (int *) calloc(A->n, sizeof(int));
   int iu = 0, il = 0;
   int col;
   for (int i = 0; i < A->n; ++i) {
@@ -332,7 +385,8 @@ void create_L_and_split(mmatrix *A, mmatrix *L, mmatrix *U, mmatrix *D, int weig
     for (int j = A->csr_ia[i]; j < A->csr_ia[i+1]; ++j) {
       DD[i] += A->csr_vals[j];
     }  
- }
+  }
+
   double Dsqrt;
   for (int i = 0; i < A->n; ++i) {
     L->csr_ia[i] = il;
@@ -357,9 +411,9 @@ void create_L_and_split(mmatrix *A, mmatrix *L, mmatrix *U, mmatrix *D, int weig
         }     
       } else {
         if (!weighted){
-          A->csr_vals[j] = (-1)*A->csr_vals[j];
+          A->csr_vals[j] = (-1.0)*A->csr_vals[j];
         } else {
-          A->csr_vals[j] = (-1.0f)*A->csr_vals[j]*Dsqrt*(1.0f/sqrt(DD[col]));
+          A->csr_vals[j] = (-1.0) * A->csr_vals[j] * Dsqrt * (1.0 / sqrt(DD[col]));
         }
       }
 
@@ -368,14 +422,14 @@ void create_L_and_split(mmatrix *A, mmatrix *L, mmatrix *U, mmatrix *D, int weig
         U->csr_vals[iu] = A->csr_vals[j];
         iu++;
       }
-      if (i>col){ /* row > col, lower part */
+      if (i > col) { /* row > col, lower part */
         L->csr_ja[il] = A->csr_ja[j];
         L->csr_vals[il] = A->csr_vals[j];
         il++;
       }
     } /* for with i */
   } /* for with j */
-  
+
   D->csr_ia[A->n] = A->n;
   L->csr_ia[A->n] = il;
   U->csr_ia[A->n] = iu;
