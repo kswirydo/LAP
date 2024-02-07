@@ -76,5 +76,11 @@ void initialize_ichol(const int n,
                       int *ja, 
                       double *a);
 
-void hip_ichol(int *ia, int *ja, double *a, int nnzA, pdata* prec_data, double * x, double *y);
+void hip_ichol(const int *ia, 
+               const int *ja, 
+               double *a, 
+               const int nnzA, 
+               pdata *prec_data, 
+               double *x, 
+               double *y);
 #endif

@@ -1,9 +1,16 @@
-#include "simple_blas.h"
-#include "cuda_blas.h"
-#include "hip_blas.h"
-#include "openmp_blas.h"
-#include "blas.h"
+
 #include "common.h"
+#if NOACC
+#include "simple_blas.h"
+#elif CUDA
+#include "cuda_blas.h"
+#elif HIP
+#include "hip_blas.h"
+#elif OPENMP
+#include "openmp_blas.h"
+#endif
+
+#include "blas.h"
 
 double dot (const int n, const double *v, const double *w){
   double d;

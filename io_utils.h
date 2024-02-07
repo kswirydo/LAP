@@ -1,4 +1,4 @@
-#include<stdio.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
@@ -37,7 +37,7 @@ typedef struct
   int nnz;
   int nnz_unpacked; //nnz in full matrix;
   
-  bool symmetric;
+  int symmetric;
 } mmatrix;
 
 void read_mm_file(const char *matrixFileName, mmatrix *A);

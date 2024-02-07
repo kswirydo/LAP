@@ -15,7 +15,7 @@ void read_mm_file(const char *matrixFileName, mmatrix *A)
 {
   /* this reads triangular matrix or general matrix  */
   int noVals = 0;
-  bool sym = 0;
+  int sym = 0;
   FILE *fpm = fopen(matrixFileName, "r");
 
   char lineBuffer[256];
