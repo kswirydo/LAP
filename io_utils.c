@@ -1,4 +1,5 @@
 #include "io_utils.h"
+#include "common.h"
 /* utilities needed for matrix I/O */
 /* and other operations of the kind */
 #if CUDA
@@ -108,10 +109,10 @@ void read_adjacency_file(const char *matrixFileName, mmatrix *A)
   {
     if (noVals == 0){
       sscanf(lineBuffer, "%d %d %lf", &r, &c, &val);
-      A->coo_vals[i] = val;
+      A->coo_vals[i] = (real_type) val;
     } else {
       sscanf(lineBuffer, "%d %d", &r, &c);
-      A->coo_vals[i] = 1.0;
+      A->coo_vals[i] = (real_type) 1.0;
     }    
 
     A->coo_rows[i] = r - 1;
@@ -151,7 +152,7 @@ void coo_to_csr(mmatrix *A)
   /* allocate full CSR structure */
   A->nnz_unpacked = nnz_unpacked;
 
-  A->csr_vals = (double *) calloc(A->nnz_unpacked, sizeof(double));
+  A->csr_vals = (real_type *) calloc(A->nnz_unpacked, sizeof(real_type));
   A->csr_ja = (int *) calloc(A->nnz_unpacked, sizeof(int));
   A->csr_ia = (int *) calloc((A->n) + 1, sizeof(int));
   indexPlusValue *tmp = (indexPlusValue *) calloc(A->nnz_unpacked, sizeof(indexPlusValue));
@@ -174,7 +175,7 @@ void coo_to_csr(mmatrix *A)
     }
 
     tmp[start + nnz_shifts[r]].idx = A->coo_cols[i];
-    tmp[start + nnz_shifts[r]].value = A->coo_vals[i];
+    tmp[start + nnz_shifts[r]].value = (real_type) A->coo_vals[i];
 
     nnz_shifts[r]++;
 
@@ -188,7 +189,7 @@ void coo_to_csr(mmatrix *A)
       }
 
       tmp[start + nnz_shifts[r]].idx = A->coo_rows[i];
-      tmp[start + nnz_shifts[r]].value = A->coo_vals[i];
+      tmp[start + nnz_shifts[r]].value = (real_type) A->coo_vals[i];
       nnz_shifts[r]++;
     }
   }
@@ -231,7 +232,7 @@ void coo_to_csr(mmatrix *A)
 
 /* read rhs from file */
 
-void read_rhs(const char *rhsFileName, double *rhs) {
+void read_rhs(const char *rhsFileName, real_type *rhs) {
 
   FILE* fpr = fopen(rhsFileName, "r");
   char lineBuffer[256];
@@ -249,7 +250,7 @@ void read_rhs(const char *rhsFileName, double *rhs) {
 
   while (fgets(lineBuffer, sizeof(lineBuffer), fpr) != NULL) {
     sscanf(lineBuffer, "%lf", &val);
-    rhs[i] = val;
+    rhs[i] = (real_type) val;
     //   printf("rhs[%d] = %16.18f \n",i, val);
     i++;
   }
@@ -273,9 +274,9 @@ void split(mmatrix *A, mmatrix *L, mmatrix *U, mmatrix *D)
   U->csr_ja = (int *) calloc (A->nnz - A->n, sizeof(int));
   D->csr_ja = (int *) calloc (A->n, sizeof(int));
 
-  L->csr_vals = (double *) calloc (A->nnz - A->n, sizeof(double));
-  U->csr_vals = (double *) calloc (A->nnz - A->n, sizeof(double));
-  D->csr_vals = (double *) calloc (A->n, sizeof(double));
+  L->csr_vals = (real_type *) calloc (A->nnz - A->n, sizeof(real_type));
+  U->csr_vals = (real_type *) calloc (A->nnz - A->n, sizeof(real_type));
+  D->csr_vals = (real_type *) calloc (A->n, sizeof(real_type));
 
   int iu = 0, il = 0;
   int col;
@@ -373,9 +374,9 @@ void create_L_and_split(mmatrix *A, mmatrix *L, mmatrix *U, mmatrix *D, int weig
   D->csr_ja = (int *) calloc (A->n, sizeof(int));
 
 
-  L->csr_vals = (double *) calloc (A->nnz - A->n, sizeof(double));
-  U->csr_vals = (double *) calloc (A->nnz - A->n, sizeof(double));
-  D->csr_vals = (double *) calloc (A->n, sizeof(double));
+  L->csr_vals = (real_type *) calloc (A->nnz - A->n, sizeof(real_type));
+  U->csr_vals = (real_type *) calloc (A->nnz - A->n, sizeof(real_type));
+  D->csr_vals = (real_type *) calloc (A->n, sizeof(real_type));
 
   int *DD = (int *) calloc(A->n, sizeof(int));
   int iu = 0, il = 0;
@@ -387,7 +388,7 @@ void create_L_and_split(mmatrix *A, mmatrix *L, mmatrix *U, mmatrix *D, int weig
     }  
   }
 
-  double Dsqrt;
+  real_type Dsqrt;
   for (int i = 0; i < A->n; ++i) {
     L->csr_ia[i] = il;
     U->csr_ia[i] = iu;
@@ -398,13 +399,13 @@ void create_L_and_split(mmatrix *A, mmatrix *L, mmatrix *U, mmatrix *D, int weig
       col = A->csr_ja[j];
       if (col == i) {
         if (!weighted){
-          A->csr_vals[j] = (double) DD[i]; 
+          A->csr_vals[j] = (real_type) DD[i]; 
           D->csr_vals[i] = A->csr_vals[j];
           D->csr_ia[i] = i;
           D->csr_ja[i] = i;
         } else {
           //printf("Weighted, putting 1.0 on the diagonal \n");
-          A->csr_vals[j]=(double)1.0f; 
+          A->csr_vals[j]= (real_type) 1.0; 
           D->csr_vals[i] = A->csr_vals[j];
           D->csr_ia[i] = i;
           D->csr_ja[i] = i;

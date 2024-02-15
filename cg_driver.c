@@ -25,12 +25,12 @@
 
 int main(int argc, char *argv[])
 {
-  double time_CG = 0.0;
+  real_type time_CG = 0.0;
   struct timeval t1, t2;
   srand(12345);
   const char *matrixFileName = argv[1];
   const char *precName = argv[2];
-  double cg_tol = atof(argv[3]);
+  real_type cg_tol = atof(argv[3]);
   int cg_maxit = atoi(argv[4]);
   int M = atoi(argv[5]);
   int K = atoi(argv[6]);
@@ -39,9 +39,10 @@ int main(int argc, char *argv[])
   L = (mmatrix *) calloc(1, sizeof(mmatrix));
   U = (mmatrix *) calloc(1, sizeof(mmatrix));
   D = (mmatrix *) calloc(1, sizeof(mmatrix));
-  read_adjacency_file(matrixFileName, A);
+read_adjacency_file(matrixFileName, A);
   coo_to_csr(A); 
 
+#if 1  
   int weighted = 0;
   create_L_and_split(A, L, U, D, weighted);
   
@@ -95,8 +96,8 @@ int main(int argc, char *argv[])
     int *new_L_ja = (int *) calloc (L->nnz+L->n, sizeof(int));
     int *new_U_ja = (int *) calloc (U->nnz+U->n, sizeof(int));
 
-    double *new_L_a = (double *) calloc (L->nnz+L->n, sizeof(double));
-    double *new_U_a = (double *) calloc (U->nnz+U->n, sizeof(double));
+    real_type *new_L_a = (real_type *) calloc (L->nnz+L->n, sizeof(real_type));
+    real_type *new_U_a = (real_type *) calloc (U->nnz+U->n, sizeof(real_type));
     int c = 0;
     for (int ii = 0; ii < L->n; ++ii) {
       for (int jj = L->csr_ia[ii]; jj < L->csr_ia[ii + 1]; ++jj) {
@@ -143,12 +144,12 @@ int main(int argc, char *argv[])
   }/* if */
 #endif 
   /* allocate space for b and its tranformations */
-  double *e   = (double *) calloc (A->n, sizeof(double));
-  double *b   = (double *) calloc (A->n, sizeof(double));
-  double *aux = (double *) calloc (A->n, sizeof(double));
+  real_type *e   = (real_type *) calloc (A->n, sizeof(real_type));
+  real_type *b   = (real_type *) calloc (A->n, sizeof(real_type));
+  real_type *aux = (real_type *) calloc (A->n, sizeof(real_type));
   
  /* vector of vertex degrees */
-  double *d = (double *) calloc (A->n, sizeof(double));
+  real_type *d = (real_type *) calloc (A->n, sizeof(real_type));
   for (int i = 0; i < A->n; ++i) {
     e[i] = 1.0;
     b[i] = pow((-1.0),((i % 2)));
@@ -159,18 +160,18 @@ int main(int argc, char *argv[])
 
   initialize_handles();
   
-  double *d_aux;
-  double *d_b;
-  double *d_d;
-  double *d_e;
-  d_aux = (double *) mallocForDevice (d_aux, A->n, sizeof(double));
-  d_b   = (double *) mallocForDevice (d_b, A->n, sizeof(double));
-  d_d   = (double *) mallocForDevice (d_d, A->n, sizeof(double));
-  d_e   = (double *) mallocForDevice (d_e, A->n, sizeof(double));
+  real_type *d_aux;
+  real_type *d_b;
+  real_type *d_d;
+  real_type *d_e;
+  d_aux = (real_type *) mallocForDevice (d_aux, A->n, sizeof(real_type));
+  d_b   = (real_type *) mallocForDevice (d_b, A->n, sizeof(real_type));
+  d_d   = (real_type *) mallocForDevice (d_d, A->n, sizeof(real_type));
+  d_e   = (real_type *) mallocForDevice (d_e, A->n, sizeof(real_type));
  
-  memcpyDevice(d_b, b, A->n,sizeof(double) , "H2D");
-  memcpyDevice(d_d, d, A->n,sizeof(double) , "H2D");
-  memcpyDevice(d_e, e, A->n,sizeof(double),  "H2D");
+  memcpyDevice(d_b, b, A->n,sizeof(real_type) , "H2D");
+  memcpyDevice(d_d, d, A->n,sizeof(real_type) , "H2D");
+  memcpyDevice(d_e, e, A->n,sizeof(real_type),  "H2D");
   
   free(b);
   free(d);
@@ -183,12 +184,12 @@ int main(int argc, char *argv[])
   d   = d_d;
 #endif
 
-  double norme = (double) sqrt(A->n);  
-  double one_over_norme = 1./norme;
+  real_type norme = (real_type) sqrt(A->n);  
+  real_type one_over_norme = 1./norme;
   
   /* non-weighted version */
   if (weighted == 0){
-    double be;
+    real_type be;
     /* e = (1/norme) e;*/
     scal(A->n, one_over_norme, e);  
     /* be = b'*e*/
@@ -196,7 +197,7 @@ int main(int argc, char *argv[])
     /*b = b-be*e; */
     be = (-1.0) * be;
   
-    double tt1, tt2;
+    real_type tt1, tt2;
     tt1 = dot(A->n, e, e);
     tt2 = dot(A->n, b, b);
     // printf("norm of e before axpy %16.16f, n = %d \n", tt1, A->n);
@@ -211,7 +212,7 @@ int main(int argc, char *argv[])
     vec_vec(A->n, aux, e, aux);
   
     /* De_norm = norm(D_De); */
-    double De_norm;
+    real_type De_norm;
     De_norm = dot(A->n, aux, aux);  
     De_norm = 1.0/sqrt(De_norm);
   
@@ -219,7 +220,7 @@ int main(int argc, char *argv[])
     scal(A->n, De_norm, aux);
 
     /* bwe = b'*De; */
-    double bwe;
+    real_type bwe;
     bwe = dot(A->n, b, aux);  
     
     /* bProjw = b- bwe*wetilde; */
@@ -232,54 +233,54 @@ int main(int argc, char *argv[])
 #if (CUDA || HIP)
   prec_data->lia = (int *)    mallocForDevice (prec_data->lia, A->n + 1, sizeof(int));
   prec_data->lja = (int *)    mallocForDevice (prec_data->lja, L->nnz, sizeof(int));
-  prec_data->la  = (double *) mallocForDevice (prec_data->la, L->nnz, sizeof(double));
+  prec_data->la  = (real_type *) mallocForDevice (prec_data->la, L->nnz, sizeof(real_type));
 
   prec_data->uia = (int *)    mallocForDevice (prec_data->uia, A->n + 1, sizeof(int));
   prec_data->uja = (int *)    mallocForDevice (prec_data->uja, U->nnz, sizeof(int));
-  prec_data->ua  = (double *) mallocForDevice (prec_data->ua, U->nnz, sizeof(double));
+  prec_data->ua  = (real_type *) mallocForDevice (prec_data->ua, U->nnz, sizeof(real_type));
 
   memcpyDevice(prec_data->lia, L->csr_ia, A->n + 1,sizeof(int),  "H2D");
   memcpyDevice(prec_data->lja, L->csr_ja, L->nnz,sizeof(int) , "H2D");
-  memcpyDevice(prec_data->la, L->csr_vals, L->nnz,sizeof(double),  "H2D");
+  memcpyDevice(prec_data->la, L->csr_vals, L->nnz,sizeof(real_type),  "H2D");
 
   memcpyDevice(prec_data->uia, U->csr_ia, A->n + 1, sizeof(int),  "H2D");
   memcpyDevice(prec_data->uja, U->csr_ja, U->nnz, sizeof(int),  "H2D");
-  memcpyDevice(prec_data->ua, U->csr_vals, U->nnz, sizeof(double),  "H2D");
+  memcpyDevice(prec_data->ua, U->csr_vals, U->nnz, sizeof(real_type),  "H2D");
   
-  prec_data->d_r = (double *) mallocForDevice(prec_data->d_r, A->n, sizeof(double));
+  prec_data->d_r = (real_type *) mallocForDevice(prec_data->d_r, A->n, sizeof(real_type));
 
   if (!weighted) {
     vector_reciprocal(A->n, d, prec_data->d_r);
   } else {
-    double *dd = (double *) calloc (A->n, sizeof(double));
+    real_type *dd = (real_type *) calloc (A->n, sizeof(real_type));
     for (int ii = 0; ii < A->n; ++ii) {
       dd[ii] = 1.0;
     }
-    memcpyDevice(prec_data->d_r, dd, A->n, sizeof(double),  "H2D");
+    memcpyDevice(prec_data->d_r, dd, A->n, sizeof(real_type),  "H2D");
     free(dd);
   }
   
   prec_data->d = d;
 
-  prec_data->aux_vec1 = (double *) mallocForDevice(prec_data->aux_vec1, A->n, sizeof(double));
-  prec_data->aux_vec2 = (double *) mallocForDevice(prec_data->aux_vec2, A->n, sizeof(double));
-  prec_data->aux_vec3 = (double *) mallocForDevice(prec_data->aux_vec3, A->n, sizeof(double));
+  prec_data->aux_vec1 = (real_type *) mallocForDevice(prec_data->aux_vec1, A->n, sizeof(real_type));
+  prec_data->aux_vec2 = (real_type *) mallocForDevice(prec_data->aux_vec2, A->n, sizeof(real_type));
+  prec_data->aux_vec3 = (real_type *) mallocForDevice(prec_data->aux_vec3, A->n, sizeof(real_type));
 
-  double *x;
-  x = (double *)  mallocForDevice (x, A->n, sizeof(double));
+  real_type *x;
+  x = (real_type *)  mallocForDevice (x, A->n, sizeof(real_type));
 
   vec_zero(A->n, x);  
   int *d_A_ia;
   int *d_A_ja;
-  double *d_A_a;
+  real_type *d_A_a;
 
   d_A_ia = (int *)  mallocForDevice ((d_A_ia),(A->n+1), sizeof(int));
 
   d_A_ja = (int *)     mallocForDevice(d_A_ja, A->nnz_unpacked, sizeof(int));
-  d_A_a  = (double *)  mallocForDevice(d_A_a, A->nnz_unpacked, sizeof(double));
+  d_A_a  = (real_type *)  mallocForDevice(d_A_a, A->nnz_unpacked, sizeof(real_type));
   memcpyDevice(d_A_ia, A->csr_ia, sizeof(int), A->n + 1, "H2D");
   memcpyDevice(d_A_ja, A->csr_ja, sizeof(int), A->nnz_unpacked, "H2D");
-  memcpyDevice(d_A_a,  A->csr_vals, sizeof(double), A->nnz_unpacked, "H2D");
+  memcpyDevice(d_A_a,  A->csr_vals, sizeof(real_type), A->nnz_unpacked, "H2D");
   
   free(A->csr_ia);
   free(A->csr_ja);
@@ -289,8 +290,8 @@ int main(int argc, char *argv[])
   A->csr_ja = d_A_ja;
   A->csr_vals = d_A_a;
   
-  double one = 1.0; 
-  double minusone = 1.0;
+  real_type one = 1.0; 
+  real_type minusone = 1.0;
 
 #if CUDA 
   initialize_spmv_buffer(A->n, 
@@ -366,13 +367,13 @@ int main(int argc, char *argv[])
   prec_data->uja = U->csr_ja;
   prec_data->ua  = U->csr_vals;
 
-  double *dd = (double *) calloc (A->n, sizeof(double));
+  real_type *dd = (real_type *) calloc (A->n, sizeof(real_type));
   vector_reciprocal(A->n, d, dd);
 
-  double *aux_vec1 = (double *) calloc (A->n, sizeof(double));
-  double *aux_vec2 = (double *) calloc (A->n, sizeof(double));
-  double *aux_vec3 = (double *) calloc (A->n, sizeof(double));
-  double *x = (double *) calloc (A->n, sizeof(double));
+  real_type *aux_vec1 = (real_type *) calloc (A->n, sizeof(real_type));
+  real_type *aux_vec2 = (real_type *) calloc (A->n, sizeof(real_type));
+  real_type *aux_vec3 = (real_type *) calloc (A->n, sizeof(real_type));
+  real_type *x = (real_type *) calloc (A->n, sizeof(real_type));
   prec_data->d = d;
   prec_data->d_r = dd;
 
@@ -381,7 +382,7 @@ int main(int argc, char *argv[])
   prec_data->aux_vec3 = aux_vec3;
 #endif
 
-  double *res_hist = (double *) calloc (26000, sizeof(double));
+  real_type *res_hist = (real_type *) calloc (26000, sizeof(real_type));
   int it, flag;
 #if 1
   //printf("A->nnz = %d \n", A->nnz_unpacked);
@@ -420,5 +421,6 @@ int main(int argc, char *argv[])
       printf("\t Reason for exiting : CG failed\n");
     }
   }
-  return 0;
+#endif  
+return 0;
 }

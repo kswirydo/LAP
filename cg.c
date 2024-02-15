@@ -2,40 +2,40 @@
 #include "blas.h"
 #include "devMem.h"
 
-void cg(int n, double nnz,
+void cg(int n, real_type nnz,
         int *ia, //matrix csr data
         int *ja,
-        double *a,
-        double *x, //solution vector, mmust be alocated prior to calling
-        double *b, //rhs
-        double tol, //DONT MULTIPLY BY NORM OF B
+        real_type *a,
+        real_type *x, //solution vector, mmust be alocated prior to calling
+        real_type *b, //rhs
+        real_type tol, //DONT MULTIPLY BY NORM OF B
         pdata* prec_data, //preconditioner data: all Ls, Us etc
         int maxit,
         int *it, //output: iteration
         int *flag, //output: flag 0-converged, 1-maxit reached, 2-catastrophic failure
-        double *res_norm_history //output: residual norm history
+        real_type *res_norm_history //output: residual norm history
        ){
 
 #if (CUDA || HIP)
-  double *r;
-  double *w;
-  double *p;
-  double *q;
+  real_type *r;
+  real_type *w;
+  real_type *p;
+  real_type *q;
 
-  r = (double*) mallocForDevice(r, n, sizeof(double));
-  w = (double*) mallocForDevice(w, n, sizeof(double));
-  p = (double*) mallocForDevice(p, n, sizeof(double));
-  q = (double*) mallocForDevice(q, n, sizeof(double));
+  r = (real_type*) mallocForDevice(r, n, sizeof(real_type));
+  w = (real_type*) mallocForDevice(w, n, sizeof(real_type));
+  p = (real_type*) mallocForDevice(p, n, sizeof(real_type));
+  q = (real_type*) mallocForDevice(q, n, sizeof(real_type));
 #else
-  double *r = (double *) calloc (n, sizeof(double));
-  double *w = (double *) calloc (n, sizeof(double));
-  double *p = (double *) calloc (n, sizeof(double));
-  double *q = (double *) calloc (n, sizeof(double));
+  real_type *r = (real_type *) calloc (n, sizeof(real_type));
+  real_type *w = (real_type *) calloc (n, sizeof(real_type));
+  real_type *p = (real_type *) calloc (n, sizeof(real_type));
+  real_type *q = (real_type *) calloc (n, sizeof(real_type));
 #endif
 
-  double alpha, beta, tolrel, rho_current, rho_previous, pTq;
-  double one = 1.0;
-  double zero = 0.0;  
+  real_type alpha, beta, tolrel, rho_current, rho_previous, pTq;
+  real_type one = 1.0;
+  real_type zero = 0.0;  
   int notconv = 1, iter = 0;
   //compute initial norm of r
   /* r = A*x */

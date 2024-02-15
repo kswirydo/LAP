@@ -1,7 +1,7 @@
 #include "openmp_blas.h"
 #include <math.h>
 
-void openmp_scal (const int n, const double alpha, double *v)
+void openmp_scal (const int n, const real_type alpha, real_type *v)
 { 
   int i;
 #pragma omp target teams distribute parallel for  schedule(static) private(i) map(alpha) map(tofrom:v[0:n])
@@ -10,7 +10,7 @@ void openmp_scal (const int n, const double alpha, double *v)
   }
 }
 
-void openmp_axpy (const int n, const double alpha, const double *x, double *y){
+void openmp_axpy (const int n, const real_type alpha, const real_type *x, real_type *y){
   int i;
 #pragma omp target teams distribute parallel for  schedule(static) private(i) map(to:x[0:n]) map(tofrom:y[0:n])
   for (i = 0; i < n; ++i) {
@@ -22,18 +22,18 @@ void openmp_csr_matvec(const int n,
                        const int nnz, 
                        const int *ia, 
                        const int *ja, 
-                       const double *a, 
-                       const double *x, 
-                       double *result,
-                       const  double *al,
-                       const double *bet) 
+                       const real_type *a, 
+                       const real_type *x, 
+                       real_type *result,
+                       const  real_type *al,
+                       const real_type *bet) 
 {
 
-  double alpha = *al;
-  double beta = *bet;
+  real_type alpha = *al;
+  real_type beta = *bet;
   /* go through every row */
   int i, j, col;
-  double s;
+  real_type s;
 #pragma omp target teams distribute parallel for  schedule(static) private(i, s)map(to:a[0:nnz], x[0:n], ia[0:n+1], ja[0:nnz], alpha, beta) map(tofrom:result[0:n])
   for (i = 0; i < n; ++i) {
     /* go through each column in this row */
@@ -51,16 +51,16 @@ void openmp_lower_triangular_solve(const int n,
                                    const int nnz, 
                                    const int *lia, 
                                    const int *lja, 
-                                   const double *la,
-                                   const double *diagonal, 
-                                   const double *x, 
-                                   double *result) 
+                                   const real_type *la,
+                                   const real_type *diagonal, 
+                                   const real_type *x, 
+                                   real_type *result) 
 {
   /* compute result = L^{-1}x */ 
   int i, j, col;
   //#pragma omp target teams distribute map(to:lia[0:n+1],lja[0:nnz],la[0:nnz],x[0:n], diagonal[0:n])  map(tofrom:result[0:n])
   for (i = 0; i < n; ++i) {
-    double s = 0.0;
+    real_type s = 0.0;
     #pragma omp simd private(j, col) reduction(+:s)
     for (j = lia[i]; j < lia[i + 1]; ++j) {
       col = lja[j];
@@ -75,15 +75,15 @@ void openmp_upper_triangular_solve(const int n,
                                    const int nnz, 
                                    const int *uia, 
                                    const int *uja, 
-                                   const double *ua, 
-                                   const double *diagonal, 
-                                   const double *x, 
-                                   double *result)
+                                   const real_type *ua, 
+                                   const real_type *diagonal, 
+                                   const real_type *x, 
+                                   real_type *result)
 {
   /* compute result = U^{-1}x */ 
   /* go through each row (starting from the last row) */
   int i, j, col;
-  double s; 
+  real_type s; 
   //this kind of works but the result is non deterministic 
 //#pragma omp target teams distribute map(to:uia[0:n+1],uja[0:nnz],ua[0:nnz], x[0:n], diagonal[0:n]) map(tofrom:result[0:n]) 
   // #pragma omp target map(to:uia[0:n+1],uja[0:nnz],ua[0:nnz], x[0:n], diagonal[0:n]) map(tofrom:result[0:n]) 
@@ -104,7 +104,7 @@ void openmp_upper_triangular_solve(const int n,
 /* not std blas but needed and embarassingly parallel */
 
 /* simple vec-vec computes an element-wise product (needed for scaling) */
-void openmp_vec_vec(const int n, const double *x, const double *y, double *res)
+void openmp_vec_vec(const int n, const real_type *x, const real_type *y, real_type *res)
 {
   int i;
 #pragma omp target teams distribute parallel for  schedule(static) private(i) map(to:x[0:n], y[0:n]) map(from:res[0:n])
@@ -114,7 +114,7 @@ void openmp_vec_vec(const int n, const double *x, const double *y, double *res)
 }
 
 /* vector reciprocal computes 1./d */
-void openmp_vector_reciprocal(const int n, const double *v, double *res)
+void openmp_vector_reciprocal(const int n, const real_type *v, real_type *res)
 {
   int i;
 #pragma omp target teams distribute parallel for  schedule(static) private(i) map(to:v[0:n]) map(from:res[0:n])
@@ -128,7 +128,7 @@ void openmp_vector_reciprocal(const int n, const double *v, double *res)
 }
 
 /* vector sqrt takes an sqrt from each vector entry */
-void openmp_vector_sqrt(const int n, const double *v, double *res)
+void openmp_vector_sqrt(const int n, const real_type *v, real_type *res)
 {
   int i;
 #pragma omp target teams distribute parallel for  schedule(static) private(i) map(to:v[0:n]) map(from:res[0:n])
@@ -141,7 +141,7 @@ void openmp_vector_sqrt(const int n, const double *v, double *res)
   }
 }
 
-void openmp_vec_copy(const int n, const double *src, double *dest)
+void openmp_vec_copy(const int n, const real_type *src, real_type *dest)
 {
   int i;
 #pragma omp target teams distribute parallel for  schedule(static) private(i) map(to:src[0:n]) map(from:dest[0:n])
@@ -150,7 +150,7 @@ void openmp_vec_copy(const int n, const double *src, double *dest)
   }
 }
 
-void openmp_vec_zero(const int n, double *vec)
+void openmp_vec_zero(const int n, real_type *vec)
 {
   int i;
 #pragma omp target teams distribute parallel for  schedule(static) private(i)  map(tofrom:vec[0:n])
@@ -159,9 +159,9 @@ void openmp_vec_zero(const int n, double *vec)
   }
 }
 
-double openmp_dot(const int n, const double *v, const double *w)
+real_type openmp_dot(const int n, const real_type *v, const real_type *w)
 {
-  double sum = 0.0;
+  real_type sum = 0.0;
   int i;
 #pragma omp target teams distribute parallel for  schedule(static) private(i) map(to:v[0:n], w[0:n]) reduction(+:sum)
   for (i = 0; i < n; ++i) {
@@ -174,10 +174,10 @@ void initialize_ichol(const int n,
                       const int nnzA, 
                       int *ia, 
                       int *ja, 
-                      double *a, 
+                      real_type *a, 
                       int *lia,
                       int *lja,
-                      double *la)
+                      real_type *la)
 {
   for (int i = 0; i < n; ++i) {
     /*   
@@ -207,7 +207,7 @@ void initialize_ichol(const int n,
   for (int i = 0; i < n; ++i) {
     for (int j = ia[i]; j < ia[i + 1]; ++j) {
       int row = ja[j];
-      double val = a[j];
+      real_type val = a[j];
       la[lia[row] + Lcounts[row]] = val;
       Lcounts[row]++;
     } 
@@ -217,17 +217,17 @@ void initialize_ichol(const int n,
 
 void openmp_ichol(const int *ia, 
                   const int *ja, 
-                  double *a, 
+                  real_type *a, 
                   const int nnzA, 
                   pdata *prec_data, 
-                  double *x, 
-                  double *y)
+                  real_type *x, 
+                  real_type *y)
 {
   /* we dont really need A but whatever */
-  double *la = prec_data->la;
+  real_type *la = prec_data->la;
   int *lia = prec_data->lia;
   int *lja = prec_data->lja;
-  double *ua = prec_data->ua;
+  real_type *ua = prec_data->ua;
   int *uia = prec_data->uia;
   int *uja = prec_data->uja;
   int n = prec_data->n;  

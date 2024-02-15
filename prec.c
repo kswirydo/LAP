@@ -5,11 +5,11 @@
 /* dispatcher function */
 void prec_function(int *ia,
                    int *ja,
-                   double *a,
+                   real_type *a,
                    int nnzA,
                    pdata *prec_data, 
-                   double *x, 
-                   double *y){
+                   real_type *x, 
+                   real_type *y){
 
   if (strcmp(prec_data->prec_op, "it_jacobi") == 0){
     it_jacobi(ia, ja, a, nnzA, prec_data, x, y);

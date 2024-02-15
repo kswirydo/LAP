@@ -9,11 +9,11 @@
 //Gauss-Seidel, classic version
 
 __global__ void squareofDTimesX(const int n,
-    const double * dd,
-    const double *x,
-    double *y){
+    const real_type * dd,
+    const real_type *x,
+    real_type *y){
   int idx = blockIdx.x * blockDim.x + threadIdx.x; 
-  double temp;
+  real_type temp;
   while (idx < n){
     temp = dd[idx];
     if (temp <0) temp *=(-1.0f);
@@ -26,7 +26,7 @@ __global__ void squareofDTimesX(const int n,
 // needed for easy sorting
 struct indexPlusValue
 {
-  double value;
+  real_type value;
   int idx;
 };
 
@@ -44,11 +44,11 @@ typedef struct
 {
   int *coo_rows;
   int *coo_cols;
-  double *coo_vals;
+  real_type *coo_vals;
 
   int *csr_ia;
   int *csr_ja;
-  double *csr_vals;
+  real_type *csr_vals;
 
   int n;
   int m;
@@ -78,13 +78,13 @@ void read_mm_file(const char *matrixFileName, mmatrix *A)
   printf("Matrix size: %d x %d, nnz %d \n",A->n, A->m, A->nnz );
   //allocate
 
-  A->coo_vals = (double *)calloc(A->nnz+A->n, sizeof(double));
+  A->coo_vals = (real_type *)calloc(A->nnz+A->n, sizeof(real_type));
   A->coo_rows = (int *)calloc(A->nnz+A->n, sizeof(int));
   A->coo_cols = (int *)calloc(A->nnz+A->n, sizeof(int));
 #if 1
   //read
   int r, c;
-  double val;
+  real_type val;
   int i = 0;
   while (fgets(lineBuffer, sizeof(lineBuffer), fpm) != NULL)
   {
@@ -138,7 +138,7 @@ void coo_to_csr(mmatrix *A)
   }
   //allocate full CSR structure
   A->nnz_unpacked = nnz_unpacked;
-  A->csr_vals = (double *)calloc(A->nnz_unpacked, sizeof(double));
+  A->csr_vals = (real_type *)calloc(A->nnz_unpacked, sizeof(real_type));
   A->csr_ja = (int *)calloc(A->nnz_unpacked, sizeof(int));
   A->csr_ia = (int *)calloc((A->n) + 1, sizeof(int));
   indexPlusValue *tmp = (indexPlusValue *)calloc(A->nnz_unpacked, sizeof(indexPlusValue));
@@ -231,9 +231,9 @@ void create_L_and_split(mmatrix *A, mmatrix *L, mmatrix *U,mmatrix *D, int weigh
   D->csr_ja = (int *) calloc (A->n, sizeof(int));
 
 
-  L->csr_vals = (double *) calloc (A->nnz-A->n, sizeof(double));
-  U->csr_vals = (double *) calloc (A->nnz-A->n, sizeof(double));
-  D->csr_vals = (double *) calloc (A->n, sizeof(double));
+  L->csr_vals = (real_type *) calloc (A->nnz-A->n, sizeof(real_type));
+  U->csr_vals = (real_type *) calloc (A->nnz-A->n, sizeof(real_type));
+  D->csr_vals = (real_type *) calloc (A->n, sizeof(real_type));
 
   int *DD = (int*) calloc(A->n, sizeof(int));
   int iu =0, il=0;
@@ -250,7 +250,7 @@ DD[i] += csr_ja[j];
 }  
  }
   //    printf("vertex %d has degree %d \n", i, DD[i]);
-  double Dsqrt;
+  real_type Dsqrt;
   for (int i=0; i<A->n; ++i){
     L->csr_ia[i] = il;
     U->csr_ia[i] = iu;
@@ -259,14 +259,14 @@ DD[i] += csr_ja[j];
       col = A->csr_ja[j];
       if (col == i) {
         if (!weighted){
-          A->csr_vals[j]=(double) DD[i]; 
+          A->csr_vals[j]=(real_type) DD[i]; 
           D->csr_vals[i] = A->csr_vals[j];
           D->csr_ia[i] = i;
           D->csr_ja[i] = i;
         }
         else {
           //printf("Weighted, putting 1.0 on the diagonal \n");
-          A->csr_vals[j]=(double)1.0f; 
+          A->csr_vals[j]=(real_type)1.0f; 
           D->csr_vals[i] = A->csr_vals[j];
           D->csr_ia[i] = i;
           D->csr_ja[i] = i;
@@ -379,36 +379,36 @@ int main(int argc, char *argv[])
   //DONT CONFUSE degree matrix with D (D is a diagonal of A) and L with Laplacian (L is lower triangular part of A)
 
   //allocate space for the GPU
-  double *d_e, *d_etilde, *d_b, *d_d;
+  real_type *d_e, *d_etilde, *d_b, *d_d;
 
-  double *e = (double *) calloc (A->n, sizeof(double));
-  double *b = (double *) calloc (A->n, sizeof(double));
+  real_type *e = (real_type *) calloc (A->n, sizeof(real_type));
+  real_type *b = (real_type *) calloc (A->n, sizeof(real_type));
   //vector of vertex degrees
-  double *d = (double *) calloc (A->n, sizeof(double));
+  real_type *d = (real_type *) calloc (A->n, sizeof(real_type));
   for (int i=0; i<A->n; ++i) {
     e[i]= 1.0f;
-    b[i] =(double) (rand()%200)/(rand()%100);
+    b[i] =(real_type) (rand()%200)/(rand()%100);
     d[i] = A->csr_ia[i+1]-A->csr_ia[i]-1; //dont count yourself
     printf("b[%d] = %f \n", i, b[i]);
   }
 
   //create an rhs.
 
-  cudaMalloc(&d_e, A->n * sizeof(double));
-  cudaMalloc(&d_b, A->n * sizeof(double));
-  cudaMalloc(&d_d, A->n * sizeof(double));
+  cudaMalloc(&d_e, A->n * sizeof(real_type));
+  cudaMalloc(&d_b, A->n * sizeof(real_type));
+  cudaMalloc(&d_d, A->n * sizeof(real_type));
 
-  cudaMemcpy(d_e, e, sizeof(double) * A->n, cudaMemcpyHostToDevice);
-  cudaMemcpy(d_b, b, sizeof(double) * A->n, cudaMemcpyHostToDevice);
-  cudaMemcpy(d_d, d, sizeof(double) * A->n, cudaMemcpyHostToDevice);
-  double norme = (double) sqrt(A->n);  
-  double one_over_norme = 1./norme;
+  cudaMemcpy(d_e, e, sizeof(real_type) * A->n, cudaMemcpyHostToDevice);
+  cudaMemcpy(d_b, b, sizeof(real_type) * A->n, cudaMemcpyHostToDevice);
+  cudaMemcpy(d_d, d, sizeof(real_type) * A->n, cudaMemcpyHostToDevice);
+  real_type norme = (real_type) sqrt(A->n);  
+  real_type one_over_norme = 1./norme;
   printf ("scaling e by %16.16f, norme %16.16e \n", one_over_norme, norme);
 
   cublasHandle_t cublas_handle;
   cublasCreate(&cublas_handle);
   if (weighted == 0){
-    double be;
+    real_type be;
     /* e = (1/norme) e;*/
     cublasDscal(cublas_handle, A->n, &one_over_norme, d_e,1);
     /* be = b'*e*/
@@ -419,14 +419,14 @@ int main(int argc, char *argv[])
     cublasDaxpy(cublas_handle,A->n, &be,d_e, 1, d_b, 1);
   }else {
     //weighted version
-    double *d_De;
-    double *d_D_csr_a; 
+    real_type *d_De;
+    real_type *d_D_csr_a; 
     int * d_D_csr_ia, *d_D_csr_ja;
 
-    cudaMalloc(&d_De, A->n * sizeof(double));
+    cudaMalloc(&d_De, A->n * sizeof(real_type));
 
 
-    cudaMalloc(&d_D_csr_a, A->n * sizeof(double));
+    cudaMalloc(&d_D_csr_a, A->n * sizeof(real_type));
 
 
     //d_De = sqrt(D)*e
@@ -435,7 +435,7 @@ int main(int argc, char *argv[])
         d_e,
         d_De);
     //De_norm = norm(D_De);
-    double De_norm;
+    real_type De_norm;
 
     cublasDdot (cublas_handle,A->n,d_De, 1, d_De,1, &De_norm);
     De_norm = sqrt(De_norm);
@@ -445,7 +445,7 @@ int main(int argc, char *argv[])
     cublasDscal(cublas_handle, A->n, &De_norm, d_De,1);
 
     //   bwe = b'*De;
-    double bwe;
+    real_type bwe;
 
     cublasDdot (cublas_handle,A->n,d_De, 1, d_b,1, &bwe);
     //bProjw = b- bwe*wetilde;

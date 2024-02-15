@@ -5,27 +5,27 @@
 #include "devMem.h"
 
 void lobpcg(int n, 
-    double nnz,
+    real_type nnz,
 		int *ia, //matrix csr data
 		int *ja,
-		double *a,
-		double tol, //DONT MULTIPLY BY NORM OF B
+		real_type *a,
+		real_type tol, //DONT MULTIPLY BY NORM OF B
 		pdata * prec_data, //preconditioner data: all Ls, Us etc
     int k, // number of eigenvalues wanted
 		int maxit,
 		int *it, //output: iteration
-    double * eig_vecs,
-    double * eig_vals		
+    real_type * eig_vecs,
+    real_type * eig_vals		
 ){
 
 #if (CUDA || HIP)
 //allocate data needed for the GPU
-  double * AX;
-  double * BX;
-  double * X;
-	AX = (double*) mallocForDevice(AX, n*k, sizeof(double));
-	BX = (double*) mallocForDevice(BX, n*k, sizeof(double));
-	X = (double*) mallocForDevice(X, n*k, sizeof(double));
+  real_type * AX;
+  real_type * BX;
+  real_type * X;
+	AX = (real_type*) mallocForDevice(AX, n*k, sizeof(real_type));
+	BX = (real_type*) mallocForDevice(BX, n*k, sizeof(real_type));
+	X = (real_type*) mallocForDevice(X, n*k, sizeof(real_type));
 
 #endif
 //initialize X

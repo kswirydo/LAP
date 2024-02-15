@@ -1,21 +1,21 @@
 #include "simple_blas.h"
 #include <math.h>
 
-double simple_dot (const int n, const double *v, const double *w){
-  double sum = 0.0;
+real_type simple_dot (const int n, const real_type *v, const real_type *w){
+  real_type sum = 0.0;
   for (int i = 0; i < n; ++i) {
     sum += v[i] * w[i];
   }
   return sum;
 }
 
-void simple_scal (const int n, const double alpha, double *v){
+void simple_scal (const int n, const real_type alpha, real_type *v){
   for (int i = 0; i < n; ++i) {
     v[i] *= alpha;
   }
 }
 
-void simple_axpy (const int n, const double alpha, const double *x, double *y){
+void simple_axpy (const int n, const real_type alpha, const real_type *x, real_type *y){
   for (int i = 0; i < n; ++i){
     y[i] += alpha * x[i];
   }
@@ -25,13 +25,13 @@ void simple_csr_matvec(const int n,
                        const int nnz, 
                        const int *ia, 
                        const int *ja,
-                       const double *a, 
-                       const double *x, 
-                       double *result,
-                       const double *al, 
-                       const double *bet){
-  double alpha = *al;
-  double beta = *bet;
+                       const real_type *a, 
+                       const real_type *x, 
+                       real_type *result,
+                       const real_type *al, 
+                       const real_type *bet){
+  real_type alpha = *al;
+  real_type beta = *bet;
   /* go through every row */
   for (int i = 0; i < n; ++i) {
     /* go through each column in this row */
@@ -47,10 +47,10 @@ void simple_lower_triangular_solve(const int n,
                                    const int nnz, 
                                    const int *lia, 
                                    const int *lja, 
-                                   const double *la,
-                                   const double *diagonal,
-                                   const double *x, 
-                                   double *result){
+                                   const real_type *la,
+                                   const real_type *diagonal,
+                                   const real_type *x, 
+                                   real_type *result){
   /* compute result = L^{-1}x */
   /* go through each row (starting from 0) */
   for (int i = 0; i < n; ++i) {
@@ -68,10 +68,10 @@ void simple_upper_triangular_solve(const int n,
                                    const int nnz, 
                                    const int *uia, 
                                    const int *uja, 
-                                   const double *ua, 
-                                   const double *diagonal, 
-                                   const double *x, 
-                                   double *result){
+                                   const real_type *ua, 
+                                   const real_type *diagonal, 
+                                   const real_type *x, 
+                                   real_type *result){
   /* compute result = U^{-1}x */
   /* go through each row (starting from the last row) */
   for (int i = n-1; i >= 0; --i) {
@@ -88,7 +88,7 @@ void simple_upper_triangular_solve(const int n,
 
 /* simple vec-vec computes an element-wise product (needed for scaling) */
 
-void simple_vec_vec(const int n, const double *x, const double *y, double *res){
+void simple_vec_vec(const int n, const real_type *x, const real_type *y, real_type *res){
   for (int i = 0; i < n; ++i) {
     res[i] = x[i] * y[i];
   }
@@ -96,7 +96,7 @@ void simple_vec_vec(const int n, const double *x, const double *y, double *res){
 
 /* vector reciprocal computes 1./d */ 
 
-void simple_vector_reciprocal(const int n, const double *v, double *res){
+void simple_vector_reciprocal(const int n, const real_type *v, real_type *res){
 
   for (int i = 0; i < n; ++i){
     if  (v[i] != 0.0) {
@@ -109,7 +109,7 @@ void simple_vector_reciprocal(const int n, const double *v, double *res){
 
 /* vector sqrt takes an sqrt from each vector entry */
 
-void simple_vector_sqrt(const int n, const double *v, double *res){
+void simple_vector_sqrt(const int n, const real_type *v, real_type *res){
 
   for (int i = 0; i < n; ++i) {
     if  (v[i] >= 0.0) {
@@ -120,7 +120,7 @@ void simple_vector_sqrt(const int n, const double *v, double *res){
   }
 }
 
-void simple_vec_copy(const int n, const double *src, double *dest){
+void simple_vec_copy(const int n, const real_type *src, real_type *dest){
 
   for (int i = 0; i < n; ++i) {
     dest[i] = src[i];  
@@ -128,7 +128,7 @@ void simple_vec_copy(const int n, const double *src, double *dest){
 }
 
 
-void simple_vec_zero(const int n, double *vec){
+void simple_vec_zero(const int n, real_type *vec){
 
   for (int i = 0; i < n; ++i) {
     vec[i] = 0.0;  
@@ -140,10 +140,10 @@ void initialize_ichol(const int n,
                       const int nnzA, 
                       int *ia, 
                       int *ja, 
-                      double *a, 
+                      real_type *a, 
                       int *lia,
                       int *lja,
-                      double *la)
+                      real_type *la)
 {
   for (int i = 0; i < n; ++i) {
     /*   
@@ -173,7 +173,7 @@ void initialize_ichol(const int n,
   for (int i = 0; i < n; ++i) {
     for (int j = ia[i]; j < ia[i + 1]; ++j) {
       int row = ja[j];
-      double val = a[j];
+      real_type val = a[j];
       la[lia[row] + Lcounts[row]] = val;
       Lcounts[row]++;
     } 
@@ -183,16 +183,16 @@ void initialize_ichol(const int n,
 
 void simple_ichol(const int *ia, 
                   const int *ja, 
-                  double *a, 
+                  real_type *a, 
                   const int nnzA, 
                   pdata *prec_data, 
-                  double *x, 
-                  double *y){
+                  real_type *x, 
+                  real_type *y){
   /* we dont really need A but whatever */
-  double *la = prec_data->la;
+  real_type *la = prec_data->la;
   int *lia = prec_data->lia;
   int *lja = prec_data->lja;
-  double *ua = prec_data->ua;
+  real_type *ua = prec_data->ua;
   int *uia = prec_data->uia;
   int *uja = prec_data->uja;
   int n = prec_data->n;  

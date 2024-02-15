@@ -46,9 +46,9 @@ void analyze_spmv(const int n,
                   const int nnz, 
                   int *ia, 
                   int *ja, 
-                  double *a, 
-                  const double *x, 
-                  double *result,
+                  real_type *a, 
+                  const real_type *x, 
+                  real_type *result,
                   char * option
                  ){
   /* no buffer in matvec */
@@ -101,11 +101,11 @@ void initialize_and_analyze_L_and_U_solve(const int n,
                                           const int nnzL, 
                                           int *lia, 
                                           int *lja, 
-                                          double *la,
+                                          real_type *la,
                                           const int nnzU, 
                                           int *uia, 
                                           int *uja, 
-                                          double *ua){
+                                          real_type *ua){
 
   size_t L_buffer_size;  
   size_t U_buffer_size;  
@@ -173,7 +173,7 @@ void initialize_ichol(const int n,
                       const int nnzA, 
                       int *ia, 
                       int *ja, 
-                      double *a)
+                      real_type *a)
 {
   // printf("initializing ICHOLi, n = %d, nnzA = %d \n",n,nnzA);
   /* Create matrix descriptor for M */
@@ -314,13 +314,13 @@ void initialize_ichol(const int n,
 
 void hip_ichol(const int *ia, 
                const int *ja, 
-               double *a, 
+               real_type *a, 
                const int nnzA, 
                pdata *prec_data, 
-               double *x, 
-               double *y)
+               real_type *x, 
+               real_type *y)
 {
-  double one = 1.0;
+  real_type one = 1.0;
   rocsparse_status st;
   st = rocsparse_dcsrsv_solve(handle_rocsparse,
                               rocsparse_operation_none,
@@ -361,9 +361,9 @@ void hip_ichol(const int *ia,
 }
 
 __global__ void hip_vec_vec_kernel(const int n,
-                                   const double *x,
-                                   const double *y,
-                                   double *z){
+                                   const real_type *x,
+                                   const real_type *y,
+                                   real_type *z){
   int idx = blockIdx.x * blockDim.x + threadIdx.x; 
   while (idx < n) {
     z[idx] = x[idx] * y[idx];
@@ -373,8 +373,8 @@ __global__ void hip_vec_vec_kernel(const int n,
 }
 
 __global__ void hip_vec_reciprocal_kernel(const int n,
-                                          const double *x,
-                                          double *z){
+                                          const real_type *x,
+                                          real_type *z){
   int idx = blockIdx.x * blockDim.x + threadIdx.x; 
   while (idx < n) {
     if  (x[idx] != 0.0){ 
@@ -388,8 +388,8 @@ __global__ void hip_vec_reciprocal_kernel(const int n,
 }
 
 __global__ void hip_vec_sqrt_kernel(const int n,
-                                    const double *x,
-                                    double *z){
+                                    const real_type *x,
+                                    real_type *z){
   int idx = blockIdx.x * blockDim.x + threadIdx.x; 
   while (idx < n) {
     if (x[idx] > 0) {
@@ -404,8 +404,8 @@ __global__ void hip_vec_sqrt_kernel(const int n,
 
 
 __global__ void hip_vec_set_kernel(const int n, 
-                                   double value,
-                                   double *x){
+                                   real_type value,
+                                   real_type *x){
   int idx = blockIdx.x * blockDim.x + threadIdx.x; 
   while (idx < n){
     x[idx] = value;
@@ -415,7 +415,7 @@ __global__ void hip_vec_set_kernel(const int n,
 }
 
 __global__ void hip_vec_zero_kernel(const int n,
-                                    double *x){
+                                    real_type *x){
   int idx = blockIdx.x * blockDim.x + threadIdx.x; 
   while (idx < n){
     x[idx] =  0.0;
@@ -424,8 +424,8 @@ __global__ void hip_vec_zero_kernel(const int n,
   }
 }
 
-double hip_dot (const int n, const double *v, const double *w){
-  double sum;
+real_type hip_dot (const int n, const real_type *v, const real_type *w){
+  real_type sum;
 
   rocblas_ddot (handle_rocblas, 
                 n, 
@@ -437,7 +437,7 @@ double hip_dot (const int n, const double *v, const double *w){
   return sum;
 }
 
-void hip_scal (const int n, const double alpha, double *v){
+void hip_scal (const int n, const real_type alpha, real_type *v){
   rocblas_dscal(handle_rocblas, 
                 n,
                 &alpha,
@@ -445,7 +445,7 @@ void hip_scal (const int n, const double alpha, double *v){
                 1);
 }
 
-void hip_axpy (const int n, const double alpha, const double *x, double *y){
+void hip_axpy (const int n, const real_type alpha, const real_type *x, real_type *y){
   rocblas_daxpy(handle_rocblas, 
                 n,
                 &alpha,
@@ -459,11 +459,11 @@ void hip_csr_matvec(const int n,
                     const int nnz, 
                     const int *ia, 
                     const int *ja, 
-                    const double *a, 
-                    const double *x, 
-                    double *result, 
-                    const double *al, 
-                    const double *bet, 
+                    const real_type *a, 
+                    const real_type *x, 
+                    real_type *result, 
+                    const real_type *al, 
+                    const real_type *bet, 
                     const char *kind){
   /* y = alpha *A* x + beta *y */
   rocsparse_status st;
@@ -524,14 +524,14 @@ void hip_lower_triangular_solve(const int n,
                                 const int nnzL, 
                                 const int *lia, 
                                 const int *lja, 
-                                const double *la,
-                                const double *diagonal, 
-                                const double *x, 
-                                double *result){
+                                const real_type *la,
+                                const real_type *diagonal, 
+                                const real_type *x, 
+                                real_type *result){
   /* compute result = L^{-1}x */
   /* we DO NOT assume anything about L diagonal */
   /* d_x3 = L^(-1)dx2 */
-  double one = 1.0;
+  real_type one = 1.0;
 
   rocsparse_dcsrsv_solve(handle_rocsparse, 
                          rocsparse_operation_none,
@@ -553,12 +553,12 @@ void hip_upper_triangular_solve(const int n,
                                 const int nnzU, 
                                 const int *uia, 
                                 const int *uja, 
-                                const double *ua, 
-                                const double *diagonal, 
-                                const double *x, 
-                                double *result){
+                                const real_type *ua, 
+                                const real_type *diagonal, 
+                                const real_type *x, 
+                                real_type *result){
   /* compute result = U^{-1}x */
-  double one = 1.0;
+  real_type one = 1.0;
   rocsparse_dcsrsv_solve(handle_rocsparse, 
                          rocsparse_operation_none,
                          n, 
@@ -579,31 +579,31 @@ void hip_upper_triangular_solve(const int n,
 
 /* hip vec-vec computes an element-wise product (needed for scaling) */
 
-void hip_vec_vec(const int n, const double *x, const double *y, double *res){
+void hip_vec_vec(const int n, const real_type *x, const real_type *y, real_type *res){
   hipLaunchKernelGGL(hip_vec_vec_kernel, dim3(n / 1024 + 1), dim3(1024), 0, 0, n, x, y, res);
 }
 
 /*vector reciprocal computes 1./d */ 
 
-void hip_vector_reciprocal(const int n, const double *v, double *res){
+void hip_vector_reciprocal(const int n, const real_type *v, real_type *res){
   hipLaunchKernelGGL( hip_vec_reciprocal_kernel,dim3(n / 1024 + 1), dim3(1024), 0, 0, n, v, res);
 }
 
 //vector sqrt takes an sqrt from each vector entry 
 
-void hip_vector_sqrt(const int n, const double *v, double *res){
+void hip_vector_sqrt(const int n, const real_type *v, real_type *res){
   hipLaunchKernelGGL(hip_vec_sqrt_kernel, dim3(n), dim3(1024), 0,0,n, v, res);
 }
 
-void hip_vec_copy(const int n, const double *src, double *dest){
-  hipMemcpy(dest, src, sizeof(double) * n, hipMemcpyDeviceToDevice);
+void hip_vec_copy(const int n, const real_type *src, real_type *dest){
+  hipMemcpy(dest, src, sizeof(real_type) * n, hipMemcpyDeviceToDevice);
 }
 
 
-void hip_vec_set(const int n, double value, double *vec){
+void hip_vec_set(const int n, real_type value, real_type *vec){
   hipLaunchKernelGGL(hip_vec_set_kernel,dim3(n), dim3(1024), 0, 0, n, value, vec);
 }
 
-void hip_vec_zero(const int n, double *vec){
+void hip_vec_zero(const int n, real_type *vec){
   hipLaunchKernelGGL(hip_vec_zero_kernel,dim3(n), dim3(1024), 0, 0, n, vec);
 }

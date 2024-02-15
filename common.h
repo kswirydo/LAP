@@ -1,6 +1,12 @@
 #include<math.h>
 #include<stdio.h>
 #include <stdlib.h>
+#define USE_FP64 0
+#if USE_FP64
+#define real_type double
+#else
+#define real_type float
+#endif
 
 #pragma once
 
@@ -13,45 +19,45 @@ typedef struct{
  
   int *lia;
   int *lja;
-  double *la;
+  real_type *la;
   int lnnz; 
  
   int *uia;
   int *uja;
-  double *ua;
+  real_type *ua;
   int unnz;
 
-  double *ichol_vals;
-  double *d;
-  double *d_r;//d_r = 1./d
+  real_type *ichol_vals;
+  real_type *d;
+  real_type *d_r;//d_r = 1./d
   int n;
 
-  double *aux_vec1, *aux_vec2, *aux_vec3;
+  real_type *aux_vec1, *aux_vec2, *aux_vec3;
 
-  char * prec_op;
+  char *prec_op;
   int m, k;//m is outer loop, k inner
 } pdata;
 
-void prec_function(int *ia, int *ja, double *a, int nnzA,pdata* prec_data, double * x, double *y);
+void prec_function(int *ia, int *ja, real_type *a, int nnzA,pdata* prec_data, real_type * x, real_type *y);
 
-void cg(int n, double nnz,
+void cg(int n, real_type nnz,
         int *ia, //matrix csr data
         int *ja,
-        double *a,
-        double *x, //solution vector, mmust be alocated prior to calling
-        double *b, //rhs
-        double tol, //DONT MULTIPLY BY NORM OF B
+        real_type *a,
+        real_type *x, //solution vector, mmust be alocated prior to calling
+        real_type *b, //rhs
+        real_type tol, //DONT MULTIPLY BY NORM OF B
         pdata *prec_data, //preconditioner data: all Ls, Us etc
         int maxit,
         int *it, //output: iteration
         int *flag, //output: flag 0-converged, 1-maxit reached, 2-catastrophic failure
-        double *res_norm_history //output: residual norm history
+        real_type *res_norm_history //output: residual norm history
        );
 
 /* preconditioners */
 
-void GS_std(int *ia, int *ja, double *a, int nnzA,  pdata* prec_data, double *vec_in, double *vec_out);
-void GS_it(int *ia, int *ja, double *a, int nnzA,  pdata* prec_data, double *vec_in, double *vec_out);
-void GS_it2(int *ia, int *ja, double *a, int nnzA,  pdata* prec_data, double *vec_in, double *vec_out);
-void it_jacobi(int *ia, int *ja, double *a, int nnzA,  pdata* prec_data, double *vec_in, double *vec_out);
-void line_jacobi(int *ia, int *ja, double *a, int nnzA,  pdata* prec_data, double *vec_in, double *vec_out);
+void GS_std(int *ia, int *ja, real_type *a, int nnzA,  pdata* prec_data, real_type *vec_in, real_type *vec_out);
+void GS_it(int *ia, int *ja, real_type *a, int nnzA,  pdata* prec_data, real_type *vec_in, real_type *vec_out);
+void GS_it2(int *ia, int *ja, real_type *a, int nnzA,  pdata* prec_data, real_type *vec_in, real_type *vec_out);
+void it_jacobi(int *ia, int *ja, real_type *a, int nnzA,  pdata* prec_data, real_type *vec_in, real_type *vec_out);
+void line_jacobi(int *ia, int *ja, real_type *a, int nnzA,  pdata* prec_data, real_type *vec_in, real_type *vec_out);

@@ -2,12 +2,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include "common.h"
 #pragma once
 
 /* needed for easy sorting */
 struct indexPlusValue
 {
-  double value;
+  real_type value;
   int idx;
 };
 typedef struct indexPlusValue indexPlusValue;
@@ -30,7 +31,7 @@ typedef struct
 
   int *csr_ia;
   int *csr_ja;
-  double *csr_vals;
+  real_type *csr_vals;
 
   int n;
   int m;
@@ -43,7 +44,7 @@ typedef struct
 void read_mm_file(const char *matrixFileName, mmatrix *A);
 void read_adjacency_file(const char *matrixFileName, mmatrix *A); 
 void coo_to_csr(mmatrix *A);
-void read_rhs(const char *rhsFileName, double *rhs);
+void read_rhs(const char *rhsFileName, real_type *rhs);
 void split(mmatrix *A, mmatrix *L, mmatrix *U, mmatrix *D);
 void create_L_and_split(mmatrix *A, mmatrix *L, mmatrix *U, mmatrix *D, int weighted);
 

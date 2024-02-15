@@ -2,13 +2,13 @@
 #include "common.h"
 #include "blas.h"
 
-void GS_std(int *ia, int *ja, double *a, int nnzA,  pdata *prec_data, double *vec_in, double *vec_out){
+void GS_std(int *ia, int *ja, real_type *a, int nnzA,  pdata *prec_data, real_type *vec_in, real_type *vec_out){
 
   int n = prec_data->n;
   int k = prec_data->k;
-  double one = 1.0;
-  double zero = 0.0;  
-  double minusone = -1.0;
+  real_type one = 1.0;
+  real_type zero = 0.0;  
+  real_type minusone = -1.0;
   vec_zero(n, vec_out);
   
   /* backward sweep */
@@ -44,15 +44,15 @@ void GS_std(int *ia, int *ja, double *a, int nnzA,  pdata *prec_data, double *ve
 }
 
 //iterative GS v1
-void GS_it(int *ia, int *ja, double *a,int nnzA, pdata *prec_data, double *vec_in, double *vec_out){
+void GS_it(int *ia, int *ja, real_type *a,int nnzA, pdata *prec_data, real_type *vec_in, real_type *vec_out){
 
   int n = prec_data->n;
   int k = prec_data->k;
   int m = prec_data->m;
 
-  double one = 1.0;
-  double zero = 0.0;  
-  double minusone = -1.0;
+  real_type one = 1.0;
+  real_type zero = 0.0;  
+  real_type minusone = -1.0;
 
   /* set vec_out to 0 */
   vec_zero(n, vec_out); 
@@ -95,15 +95,15 @@ void GS_it(int *ia, int *ja, double *a,int nnzA, pdata *prec_data, double *vec_i
 }
 
 //iterative GS v2
-void GS_it2(int *ia, int *ja, double *a,int nnzA, pdata *prec_data, double *vec_in, double *vec_out){
+void GS_it2(int *ia, int *ja, real_type *a,int nnzA, pdata *prec_data, real_type *vec_in, real_type *vec_out){
 
   int n = prec_data->n;
   int k = prec_data->k;
   int m = prec_data->m;
   
-  double one = 1.0;
-  double zero = 0.0;  
-  double minusone = -1.0; 
+  real_type one = 1.0;
+  real_type zero = 0.0;  
+  real_type minusone = -1.0; 
   /* y = Dinv.*b; */
   vec_vec(n, vec_in, prec_data->d_r, prec_data->aux_vec1); 
   /* outer loop */

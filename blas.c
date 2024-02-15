@@ -12,8 +12,8 @@
 
 #include "blas.h"
 
-double dot (const int n, const double *v, const double *w){
-  double d;
+real_type dot (const int n, const real_type *v, const real_type *w){
+  real_type d;
 #if NOACC
   d = simple_dot (n, v, w);
 #elif  CUDA
@@ -26,7 +26,7 @@ double dot (const int n, const double *v, const double *w){
   return d;
 }
 
-void axpy (const int n, const double alpha, double *x, double *y){
+void axpy (const int n, const real_type alpha, real_type *x, real_type *y){
 #if NOACC
   simple_axpy (n, alpha, x, y);
 #elif CUDA
@@ -38,7 +38,7 @@ void axpy (const int n, const double alpha, double *x, double *y){
 #endif
 }
 
-void scal (const int n, const double alpha, double *v){
+void scal (const int n, const real_type alpha, real_type *v){
 #if NOACC
   simple_scal (n, alpha, v);
 #elif CUDA
@@ -54,11 +54,11 @@ void csr_matvec(const int n,
                 const int nnz, 
                 const int *ia, 
                 const int *ja, 
-                const double *a, 
-                const double *x, 
-                double *result, 
-                const double *al, 
-                const double *bet,
+                const real_type *a, 
+                const real_type *x, 
+                real_type *result, 
+                const real_type *al, 
+                const real_type *bet,
                 const char *kind){
 #if NOACC
   simple_csr_matvec(n, nnz, ia, ja, a, x, result, al, bet);
@@ -76,10 +76,10 @@ void lower_triangular_solve(const int n,
                             const int nnz, 
                             const int *lia, 
                             const int *lja, 
-                            const double *la,
-                            const double * diag, 
-                            const double *x, 
-                            double *result){
+                            const real_type *la,
+                            const real_type * diag, 
+                            const real_type *x, 
+                            real_type *result){
 #if NOACC
   simple_lower_triangular_solve(n, nnz, lia, lja, la, diag, x, result);
 #elif CUDA
@@ -95,10 +95,10 @@ void upper_triangular_solve(const int n,
                             const int nnz, 
                             const int *uia, 
                             const int *uja, 
-                            const double *ua,
-                            const double *diag, 
-                            const double *x, 
-                            double *result){
+                            const real_type *ua,
+                            const real_type *diag, 
+                            const real_type *x, 
+                            real_type *result){
 #if NOACC
   simple_upper_triangular_solve(n, nnz, uia, uja, ua, diag, x, result);
 #elif CUDA
@@ -110,7 +110,7 @@ void upper_triangular_solve(const int n,
 #endif
 }
 
-void ichol(const int *ia, const int *ja, double *a, const int nnzA, pdata *prec_data, double *x, double *y){
+void ichol(const int *ia, const int *ja, real_type *a, const int nnzA, pdata *prec_data, real_type *x, real_type *y){
 #if NOACC
   simple_ichol( ia, ja, a, nnzA, prec_data, x, y);
 #elif CUDA
@@ -122,7 +122,7 @@ void ichol(const int *ia, const int *ja, double *a, const int nnzA, pdata *prec_
 #endif
 }
 
-void vec_vec(const int n, const double *x, double *y, double *res){
+void vec_vec(const int n, const real_type *x, real_type *y, real_type *res){
 #if NOACC
   simple_vec_vec(n, x, y, res);
 #elif CUDA
@@ -135,7 +135,7 @@ void vec_vec(const int n, const double *x, double *y, double *res){
 }
 
 
-void vector_reciprocal(const int n, const double *v, double *res){
+void vector_reciprocal(const int n, const real_type *v, real_type *res){
 #if NOACC
   simple_vector_reciprocal(n, v, res);
 #elif CUDA
@@ -148,7 +148,7 @@ void vector_reciprocal(const int n, const double *v, double *res){
 }
 
 
-void vector_sqrt(const int n, const double *v, double *res){
+void vector_sqrt(const int n, const real_type *v, real_type *res){
 #if NOACC
   simple_vector_sqrt(n, v, res);
 #elif CUDA
@@ -161,7 +161,7 @@ void vector_sqrt(const int n, const double *v, double *res){
 }
 
 
-void vec_copy(const int n, double *src, double *dest){
+void vec_copy(const int n, real_type *src, real_type *dest){
 #if NOACC
   simple_vec_copy(n, src, dest);
 #elif CUDA
@@ -173,7 +173,7 @@ void vec_copy(const int n, double *src, double *dest){
 #endif
 }
 
-void vec_zero(const int n, double *vec){
+void vec_zero(const int n, real_type *vec){
 #if NOACC
   simple_vec_zero(n, vec);
 #elif CUDA
