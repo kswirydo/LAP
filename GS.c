@@ -7,7 +7,6 @@ void GS_std(int *ia, int *ja, real_type *a, int nnzA,  pdata *prec_data, real_ty
   int n = prec_data->n;
   int k = prec_data->k;
   real_type one = 1.0;
-  real_type zero = 0.0;  
   real_type minusone = -1.0;
   vec_zero(n, vec_out);
   
@@ -51,7 +50,6 @@ void GS_it(int *ia, int *ja, real_type *a,int nnzA, pdata *prec_data, real_type 
   int m = prec_data->m;
 
   real_type one = 1.0;
-  real_type zero = 0.0;  
   real_type minusone = -1.0;
 
   /* set vec_out to 0 */

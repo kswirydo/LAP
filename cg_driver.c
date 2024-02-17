@@ -39,7 +39,7 @@ int main(int argc, char *argv[])
   L = (mmatrix *) calloc(1, sizeof(mmatrix));
   U = (mmatrix *) calloc(1, sizeof(mmatrix));
   D = (mmatrix *) calloc(1, sizeof(mmatrix));
-read_adjacency_file(matrixFileName, A);
+  read_adjacency_file(matrixFileName, A);
   coo_to_csr(A); 
 
 #if 1  
@@ -156,6 +156,7 @@ read_adjacency_file(matrixFileName, A);
     d[i] = D->csr_vals[i];   
   }
 
+  printf("norm of b (initial): %17.17e \n", dot(A->n, b, b)); 
 #if (CUDA || HIP)
 
   initialize_handles();
@@ -185,7 +186,7 @@ read_adjacency_file(matrixFileName, A);
 #endif
 
   real_type norme = (real_type) sqrt(A->n);  
-  real_type one_over_norme = 1./norme;
+ real_type one_over_norme = 1./norme;
   
   /* non-weighted version */
   if (weighted == 0){
