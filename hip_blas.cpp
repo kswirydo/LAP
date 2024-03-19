@@ -40,6 +40,7 @@ void initialize_handles(){
   rocsparse_create_mat_info(&infoA);
   rocsparse_create_mat_info(&infoL);
   rocsparse_create_mat_info(&infoU);
+  hipDeviceSynchronize();
 }
 
 void analyze_spmv(const int n, 
@@ -95,6 +96,7 @@ void analyze_spmv(const int n,
   if (status_rocsparse != 0) {
     printf("mv analysis status for %s is %d \n", option, status_rocsparse);
   }
+  hipDeviceSynchronize();
 }
 
 void initialize_and_analyze_L_and_U_solve(const int n, 
@@ -167,6 +169,7 @@ void initialize_and_analyze_L_and_U_solve(const int n,
   if (status_rocsparse != 0) {
     printf("status after analysis 2 %d \n", status_rocsparse);
   }
+  hipDeviceSynchronize();
 }
 
 void initialize_ichol(const int n, 
@@ -310,6 +313,7 @@ void initialize_ichol(const int n,
            position,
            position);
   }
+    hipDeviceSynchronize();
 }
 
 void hip_ichol(const int *ia, 
@@ -358,6 +362,7 @@ void hip_ichol(const int *ia,
   if (st != 0) {
     printf("status L^T solve: %d \n", st);
   }
+  hipDeviceSynchronize();
 }
 
 __global__ void hip_vec_vec_kernel(const int n,
@@ -427,6 +432,7 @@ __global__ void hip_vec_zero_kernel(const int n,
 real_type hip_dot (const int n, const real_type *v, const real_type *w){
   real_type sum;
 
+  hipDeviceSynchronize();
   rocblas_ddot (handle_rocblas, 
                 n, 
                 v, 
@@ -434,6 +440,7 @@ real_type hip_dot (const int n, const real_type *v, const real_type *w){
                 w, 
                 1, 
                 &sum);
+  hipDeviceSynchronize();
   return sum;
 }
 
@@ -443,6 +450,7 @@ void hip_scal (const int n, const real_type alpha, real_type *v){
                 &alpha,
                 v, 
                 1);
+  hipDeviceSynchronize();
 }
 
 void hip_axpy (const int n, const real_type alpha, const real_type *x, real_type *y){
@@ -453,6 +461,7 @@ void hip_axpy (const int n, const real_type alpha, const real_type *x, real_type
                 1,
                 y, 
                 1);
+  hipDeviceSynchronize();
 }
 
 void hip_csr_matvec(const int n, 
@@ -467,6 +476,7 @@ void hip_csr_matvec(const int n,
                     const char *kind){
   /* y = alpha *A* x + beta *y */
   rocsparse_status st;
+  hipDeviceSynchronize();
   if (strcmp(kind, "A") == 0) {
     st = rocsparse_dcsrmv(handle_rocsparse,
                           rocsparse_operation_none,
@@ -503,20 +513,21 @@ void hip_csr_matvec(const int n,
 
   if (strcmp(kind, "U") == 0) {
     st = rocsparse_dcsrmv(handle_rocsparse,
-                         rocsparse_operation_none,
-                         n,
-                         n,
-                         nnz,
-                         al,
-                         descrU,
-                         a,
-                         ia,
-                         ja,
-                         infoU,
-                         x,
-                         bet,
-                         result);
+                          rocsparse_operation_none,
+                          n,
+                          n,
+                          nnz,
+                          al,
+                          descrU,
+                          a,
+                          ia,
+                          ja,
+                          infoU,
+                          x,
+                          bet,
+                          result);
   }
+  hipDeviceSynchronize();
   // printf("status after mv: %d\n", st);
 }
 
@@ -533,6 +544,7 @@ void hip_lower_triangular_solve(const int n,
   /* d_x3 = L^(-1)dx2 */
   real_type one = 1.0;
 
+  hipDeviceSynchronize();
   rocsparse_dcsrsv_solve(handle_rocsparse, 
                          rocsparse_operation_none,
                          n,
@@ -547,6 +559,7 @@ void hip_lower_triangular_solve(const int n,
                          result,
                          rocsparse_solve_policy_auto,
                          L_buffer);
+  hipDeviceSynchronize();
 }
 
 void hip_upper_triangular_solve(const int n, 
@@ -559,6 +572,7 @@ void hip_upper_triangular_solve(const int n,
                                 real_type *result){
   /* compute result = U^{-1}x */
   real_type one = 1.0;
+  hipDeviceSynchronize();
   rocsparse_dcsrsv_solve(handle_rocsparse, 
                          rocsparse_operation_none,
                          n, 
@@ -573,6 +587,7 @@ void hip_upper_triangular_solve(const int n,
                          result,
                          rocsparse_solve_policy_auto,
                          U_buffer);
+  hipDeviceSynchronize();
 }
 
 /* not std blas but needed and embarassingly parallel */ 
@@ -581,29 +596,35 @@ void hip_upper_triangular_solve(const int n,
 
 void hip_vec_vec(const int n, const real_type *x, const real_type *y, real_type *res){
   hipLaunchKernelGGL(hip_vec_vec_kernel, dim3(n / 1024 + 1), dim3(1024), 0, 0, n, x, y, res);
+  hipDeviceSynchronize();
 }
 
 /*vector reciprocal computes 1./d */ 
 
 void hip_vector_reciprocal(const int n, const real_type *v, real_type *res){
   hipLaunchKernelGGL( hip_vec_reciprocal_kernel,dim3(n / 1024 + 1), dim3(1024), 0, 0, n, v, res);
+  hipDeviceSynchronize();
 }
 
 //vector sqrt takes an sqrt from each vector entry 
 
 void hip_vector_sqrt(const int n, const real_type *v, real_type *res){
-  hipLaunchKernelGGL(hip_vec_sqrt_kernel, dim3(n), dim3(1024), 0,0,n, v, res);
+  hipLaunchKernelGGL(hip_vec_sqrt_kernel, dim3(n / 1024 +1), dim3(1024), 0,0,n, v, res);
+  hipDeviceSynchronize();
 }
 
 void hip_vec_copy(const int n, const real_type *src, real_type *dest){
   hipMemcpy(dest, src, sizeof(real_type) * n, hipMemcpyDeviceToDevice);
+  hipDeviceSynchronize();
 }
 
 
 void hip_vec_set(const int n, real_type value, real_type *vec){
-  hipLaunchKernelGGL(hip_vec_set_kernel,dim3(n), dim3(1024), 0, 0, n, value, vec);
+  hipLaunchKernelGGL(hip_vec_set_kernel,dim3(n/ 1024 + 1), dim3(1024), 0, 0, n, value, vec);
+  hipDeviceSynchronize();
 }
 
 void hip_vec_zero(const int n, real_type *vec){
-  hipLaunchKernelGGL(hip_vec_zero_kernel,dim3(n), dim3(1024), 0, 0, n, vec);
+  hipLaunchKernelGGL(hip_vec_zero_kernel,dim3(n / 1024 + 1), dim3(1024), 0, 0, n, vec);
+  hipDeviceSynchronize();
 }

@@ -9,20 +9,19 @@ void GS_std(int *ia, int *ja, real_type *a, int nnzA,  pdata *prec_data, real_ty
   real_type one = 1.0;
   real_type minusone = -1.0;
   vec_zero(n, vec_out);
-  
   /* backward sweep */
   for (int i = 0; i < k; ++i) {
     /* x = x + L \ ( b - As*x );*/
     //  printf("Inside GS, L solve, before mv: %f \n", dot(n, vec_out, vec_out)); 
     vec_copy(n, vec_in, prec_data->aux_vec2);
     csr_matvec(n, nnzA,ia,  ja,  a, vec_out,  prec_data->aux_vec2, &minusone, &one, "A");
-    // printf("after mv: %f \n", dot(n, prec_data->aux_vec1, prec_data->aux_vec1)); 
+    //  printf("after mv: %f \n", dot(n, prec_data->aux_vec1, prec_data->aux_vec1)); 
     /* aux_vec2 = aux_vec1*(-1) +vec_in */
-    
+
     /* tri solve L^{-1}*aux_vec2 */
     // printf(" norm r sq: %f \n", dot(n, prec_data->aux_vec2, prec_data->aux_vec2)); 
     lower_triangular_solve(n, prec_data->lnnz, prec_data->lia, prec_data->lja, prec_data->la,prec_data->d, prec_data->aux_vec2, prec_data->aux_vec1);
-    //  printf(" norm sq after L ts: %f \n", dot(n, prec_data->aux_vec1, prec_data->aux_vec1)); 
+    // printf(" norm sq after L ts: %f \n", dot(n, prec_data->aux_vec1, prec_data->aux_vec1)); 
 
     axpy(n, 1.0, prec_data->aux_vec1, vec_out);
   }
@@ -34,7 +33,7 @@ void GS_std(int *ia, int *ja, real_type *a, int nnzA,  pdata *prec_data, real_ty
 
     vec_copy(n, vec_in, prec_data->aux_vec2);
     csr_matvec(n, nnzA,ia,  ja,  a, vec_out,  prec_data->aux_vec2, &minusone, &one, "A");
- 
+
     /* tri solve U^{-1}*aux_vec2 */
     upper_triangular_solve(n, prec_data->unnz, prec_data->uia, prec_data->uja, prec_data->ua,prec_data->d, prec_data->aux_vec2, prec_data->aux_vec1);
 
@@ -98,7 +97,7 @@ void GS_it2(int *ia, int *ja, real_type *a,int nnzA, pdata *prec_data, real_type
   int n = prec_data->n;
   int k = prec_data->k;
   int m = prec_data->m;
-  
+
   real_type one = 1.0;
   real_type zero = 0.0;  
   real_type minusone = -1.0; 
@@ -127,7 +126,7 @@ void GS_it2(int *ia, int *ja, real_type *a,int nnzA, pdata *prec_data, real_type
     /* vec1 = L*y = L*vec2 */
     /* r = b-L*y : vec2 =  vec2 - vec1 */
     csr_matvec(n, prec_data->lnnz, prec_data->lia,  prec_data->lja,  prec_data->la, prec_data->aux_vec2,  prec_data->aux_vec3, &minusone, &one, "L");
-    
+
     /* inner loop 2 */
     for (int i = 0; i < k; ++i){
       /* y = (v).* ( r - U * y ); */
@@ -143,7 +142,7 @@ void GS_it2(int *ia, int *ja, real_type *a,int nnzA, pdata *prec_data, real_type
     vec_copy(n, vec_in, prec_data->aux_vec3);
     /* vec1 = U*y = U*vec2 */
     csr_matvec(n, prec_data->unnz,prec_data->uia,  prec_data->uja,  prec_data->ua, prec_data->aux_vec2,  prec_data->aux_vec3, &minusone, &one, "U");
-    
+
     /* inner loop 3 */
     for (int i = 0; i < k; ++i){
       /* y = (v).* ( r - L * y ); */

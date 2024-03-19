@@ -26,6 +26,12 @@ void cg(int n, real_type nnz,
   w = (real_type*) mallocForDevice(w, n, sizeof(real_type));
   p = (real_type*) mallocForDevice(p, n, sizeof(real_type));
   q = (real_type*) mallocForDevice(q, n, sizeof(real_type));
+#if HIP
+  vec_zero(n, w);
+  vec_zero(n, r);
+  vec_zero(n, p);
+  vec_zero(n, q);
+#endif
 #else
   real_type *r = (real_type *) calloc (n, sizeof(real_type));
   real_type *w = (real_type *) calloc (n, sizeof(real_type));
@@ -43,7 +49,7 @@ void cg(int n, real_type nnz,
 
   /* r = -b +r = Ax-b */
   axpy(n, -1.0, b, r);
-  printf("Norm of r %e \n", dot(n, r,r));  
+  // printf("Norm of r %e \n", dot(n, r,r));  
 
   /* r=(-1.0)*r */
   scal(n, -1.0, r);
@@ -56,11 +62,14 @@ void cg(int n, real_type nnz,
   printf("CG: it %d, res norm %5.5e \n",0, res_norm_history[0]);
 
   while (notconv){
-    //  printf("Norm of X before prec %16.16e \n", dot(n, r,r));  
+    // printf("Norm of X before prec %16.16e \n", dot(n, r,r));  
+#if HIP
+    vec_zero(n, w);
+#endif
     prec_function(ia, ja, a, nnz, prec_data, r, w);
     // printf("Norm of X after prec %16.16e \n", dot(n, w,w));  
 
-   /* rho_current = r'*w; */
+    /* rho_current = r'*w; */
     rho_current = dot(n, r, w);
     if (iter == 0) {
       vec_copy(n, w, p);
