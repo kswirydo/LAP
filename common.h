@@ -1,7 +1,7 @@
 #include<math.h>
 #include<stdio.h>
 #include <stdlib.h>
-#define USE_FP64 0
+#define USE_FP64 1
 #if USE_FP64
 #define real_type double
 #else
@@ -10,6 +10,7 @@
 
 #pragma once
 
+#define V100 1
 #define NOACC 0
 #define CUDA 1
 #define OPENMP 0

@@ -78,8 +78,12 @@ void initialize_spmv_buffer(const int n,
                                             bet,
                                             vecY,
                                              cuda_data_type,
-                                            CUSPARSE_SPMV_CSR_ALG2,
-                                            &mv_buffer_size);
+#if V100
+                                             CUSPARSE_CSRMV_ALG2,
+#else
+                                            CUSPARSE_MV_CSR_ALG2,
+#endif     
+                                       &mv_buffer_size);
 
   cudaDeviceSynchronize();
 
@@ -710,8 +714,12 @@ void cuda_csr_matvec(const int n, const int nnz, const int *ia, const int *ja, c
                                  bet,
                                  vecY,
                                  cuda_data_type,
+#if V100
+                                 CUSPARSE_CSRMV_ALG2,
+#else
                                  CUSPARSE_SPMV_CSR_ALG2,
-                                 mv_buffer);
+#endif     
+                            mv_buffer);
   //  printf("matvec status: %d is MV BUFFER NULL? %d  is matA null? %d\n", status_cusparse, mv_buffer == NULL, matA==NULL);
   //  printf("after matvec: input^Tinput %5.16e, output^Toutput %5.16e\n", cuda_dot(n, x,x), cuda_dot(n,result, result));
 
