@@ -81,7 +81,7 @@ void initialize_spmv_buffer(const int n,
 #if V100
                                              CUSPARSE_CSRMV_ALG2,
 #else
-                                            CUSPARSE_MV_CSR_ALG2,
+                                             CUSPARSE_SPMV_CSR_ALG2,
 #endif     
                                        &mv_buffer_size);
 
