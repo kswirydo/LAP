@@ -2,6 +2,7 @@ CC := g++
 NVCC := nvcc
 AR := ar
 INCLUDES  :=  
+CONF_FLAGS := -DV100=0 -DNOACC=0 -DCUDA=1 -DOPENMP=0 -DHIP=0
 CUDA_LIBS := -lcusparse -lcublas
 NVCC_FLAGS := -arch=sm_80  
 CPP_FLAGS := -x cu
@@ -23,11 +24,11 @@ OBJSDRIVER3 = mm_driver.o
 all: lap_laplacian lap_cg lap_spmv
 
 %.o: %.c
-	${CC} ${FLAGS} ${INCLUDES} -o $@ -c $<
+	${CC} ${CONF_FLAGS} ${FLAGS} ${INCLUDES} -o $@ -c $<
 %.o: %.cu
-	${NVCC} ${NVCC_FLAGS} ${FLAGS} ${CUDA_LIBS} -o $@ -c $<
+	${NVCC} ${CONF_FLAGS} ${NVCC_FLAGS} ${FLAGS} ${CUDA_LIBS} -o $@ -c $<
 %.o: %.cpp
-	${NVCC} ${NVCC_FLAGS} ${CPP_FLAGS} ${FLAGS} ${CUDA_LIBS} -o $@ -c $<
+	${NVCC} ${CONF_FLAGS} ${NVCC_FLAGS} ${CPP_FLAGS} ${FLAGS} ${CUDA_LIBS} -o $@ -c $<
 
 lap_laplacian: ${OBJSORDERED} ${OBJSDRIVER1}
 	 ${NVCC} ${NVCC_FLAGS} ${CFLAGS}  -o $@ ${OBJSORDERED} ${OBJSDRIVER1} ${LIBS} ${CUDA_LIBS}

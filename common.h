@@ -10,11 +10,21 @@
 
 #pragma once
 
-#define V100 1
-#define NOACC 0
-#define CUDA 1
-#define OPENMP 0
+#ifndef V100
+#	define V100 0
+#endif
+#ifndef NOACC
+#	define NOACC 0
+#endif
+#ifndef CUDA
+#	define CUDA 1
+#endif
+#ifndef OPENMP
+#	define OPENMP 0
+#endif
+#ifndef HIP
 #define HIP 0
+#endif
 
 typedef struct{
  
