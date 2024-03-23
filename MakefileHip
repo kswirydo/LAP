@@ -3,6 +3,7 @@ NVCC := nvcc
 HIPCC := hipcc
 AR := ar
 INCLUDES  := 
+CONF_FLAGS := -DV100=0 -DNOACC=0 -DCUDA=0 -DOPENMP=0 -DHIP=1
 CUDA_LIBS := -lcusparse -lcublas
 NVCC_FLAGS := -arch=sm_80 -rdc=true 
 FLAGS := -O3 -g
@@ -26,11 +27,11 @@ OBJSDRIVER3 = mm_driver.o
 # Rules                                                                         
 all: lap_hip_laplacian lap_hip_cg lap_hip_spmv
 %.o: %.c
-	${CC} ${FLAGS} ${INCLUDES} -o $@ -c $<
+	${CC} ${CONF_FLAGS} ${FLAGS} ${INCLUDES} -o $@ -c $<
 %.o: %.cpp
-	${HIPCC} ${FLAGS_HIP} ${INCLUDES_HIP} -o $@ -c $<
+	${HIPCC} ${CONF_FLAGS} ${FLAGS_HIP} ${INCLUDES_HIP} -o $@ -c $<
 $(OBJSOMP): $(SRCOMP)
-	${NVC} ${FLAGS_OMP} -o $@ -c $<
+	${NVC} ${CONF_FLAGS} ${FLAGS_OMP} -o $@ -c $<
 
 lap_hip_laplacian: ${OBJSORDERED_HIP} ${OBJSDRIVER1}
 	${HIPCC} ${FLAGS_HIP} ${INCLUDES} -o $@ ${OBJSORDERED_HIP} ${OBJSDRIVER1}  ${LIBS} ${LIBS_HIP} 
