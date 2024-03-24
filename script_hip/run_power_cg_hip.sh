@@ -1,13 +1,13 @@
 #!/bin/bash
-MTX_HOME="qfs/projects/eracle/data/"
+MTX_HOME="/qfs/projects/eracle/data/"
 RES_OUT_HOME="./output_results"
 RES_HOME="./power_results"
 HIP_POWER_SCRIPT="../continous.sh"
 SCRIPT="../../lap_hip_cg " ## This is were the command go
 PRECOND=('GS_std' 'GS_it' 'GS_it2' 'it_jacobi' 'line_jacobi' 'ichol')
 #MATRIX=('delaunay_n24/delaunay_n24.mtx', 'Fault_639/Fault_639.mtx', 'G3_circuit/G3_circuit.mtx', 'Serena/Serena.mtx', 't60k/t60k.mtx', 'thermal2/thermal2.mtx', 'af_0_k101/af_0_k101.mtx', 'hugebubbles-00000/hugebubbles-00000.mtx', 'adaptive/adaptive.mtx', Hook_1498/Hook_1498.mtx)
-#MATRIX=('Fault_639/Fault_639.mtx' 'G3_circuit/G3_circuit.mtx' 'Serena/Serena.mtx' 'thermal2/thermal2.mtx' 'af_0_k101/af_0_k101.mtx' 'Hook_1498/Hook_1498.mtx')
-MATRIX=('Fault_639/Fault_639.mtx')
+MATRIX=('Fault_639/Fault_639.mtx' 'G3_circuit/G3_circuit.mtx' 'Serena/Serena.mtx' 'thermal2/thermal2.mtx' 'af_0_k101/af_0_k101.mtx' 'Hook_1498/Hook_1498.mtx')
+#MATRIX=('Fault_639/Fault_639.mtx')
 RHS=('' '' '' 'thermal2/thermal2_b.mtx' 'af_0_k101/af_0_k101_b.mtx' '')
 
 declare -A ARGX
