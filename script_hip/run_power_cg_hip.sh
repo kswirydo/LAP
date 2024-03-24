@@ -1,5 +1,5 @@
 #!/bin/bash
-MTX_HOME="/qfs/projects/eracle/data/"
+MTX_HOME="/people/firo017/pact_exp/LAP/lap_matrices"  # "/qfs/projects/eracle/data/"
 RES_OUT_HOME="./output_results"
 RES_HOME="./power_results"
 HIP_POWER_SCRIPT="../continous.sh"
@@ -19,40 +19,40 @@ ARGX+=(["${MATRIX[0]}_${PRECOND[3]}"]='-1')
 ARGX+=(["${MATRIX[0]}_${PRECOND[4]}"]='10 1') 
 ARGX+=(["${MATRIX[0]}_${PRECOND[5]}"]='-1') 
 
-#ARGX+=(["${MATRIX[1]}_${PRECOND[0]}"]='1 1') 
-#ARGX+=(["${MATRIX[1]}_${PRECOND[1]}"]='-1') 
-#ARGX+=(["${MATRIX[1]}_${PRECOND[2]}"]='1 1') 
-#ARGX+=(["${MATRIX[1]}_${PRECOND[3]}"]='1 1') 
-#ARGX+=(["${MATRIX[1]}_${PRECOND[4]}"]='1 1')
-#ARGX+=(["${MATRIX[1]}_${PRECOND[5]}"]='1 1') 
+ARGX+=(["${MATRIX[1]}_${PRECOND[0]}"]='1 1') 
+ARGX+=(["${MATRIX[1]}_${PRECOND[1]}"]='-1') 
+ARGX+=(["${MATRIX[1]}_${PRECOND[2]}"]='1 1') 
+ARGX+=(["${MATRIX[1]}_${PRECOND[3]}"]='1 1') 
+ARGX+=(["${MATRIX[1]}_${PRECOND[4]}"]='1 1')
+ARGX+=(["${MATRIX[1]}_${PRECOND[5]}"]='1 1') 
 
-#ARGX+=(["${MATRIX[2]}_${PRECOND[0]}"]='1 1') 
-#ARGX+=(["${MATRIX[2]}_${PRECOND[1]}"]='-1')
-#ARGX+=(["${MATRIX[2]}_${PRECOND[2]}"]='3 15') 
-#ARGX+=(["${MATRIX[2]}_${PRECOND[3]}"]='-1')
-#ARGX+=(["${MATRIX[2]}_${PRECOND[4]}"]='1 1') 
-#ARGX+=(["${MATRIX[2]}_${PRECOND[5]}"]='-1') 
+ARGX+=(["${MATRIX[2]}_${PRECOND[0]}"]='1 1') 
+ARGX+=(["${MATRIX[2]}_${PRECOND[1]}"]='-1')
+ARGX+=(["${MATRIX[2]}_${PRECOND[2]}"]='3 15') 
+ARGX+=(["${MATRIX[2]}_${PRECOND[3]}"]='-1')
+ARGX+=(["${MATRIX[2]}_${PRECOND[4]}"]='1 1') 
+ARGX+=(["${MATRIX[2]}_${PRECOND[5]}"]='-1') 
 
-#ARGX+=(["${MATRIX[3]}_${PRECOND[0]}"]='1 2')
-#ARGX+=(["${MATRIX[3]}_${PRECOND[1]}"]='12 1')
-#ARGX+=(["${MATRIX[3]}_${PRECOND[2]}"]='1 1')
-#ARGX+=(["${MATRIX[3]}_${PRECOND[3]}"]='1 1')
-#ARGX+=(["${MATRIX[3]}_${PRECOND[4]}"]='1 1')
-#ARGX+=(["${MATRIX[3]}_${PRECOND[5]}"]='1 1')
+ARGX+=(["${MATRIX[3]}_${PRECOND[0]}"]='1 2')
+ARGX+=(["${MATRIX[3]}_${PRECOND[1]}"]='12 1')
+ARGX+=(["${MATRIX[3]}_${PRECOND[2]}"]='1 1')
+ARGX+=(["${MATRIX[3]}_${PRECOND[3]}"]='1 1')
+ARGX+=(["${MATRIX[3]}_${PRECOND[4]}"]='1 1')
+ARGX+=(["${MATRIX[3]}_${PRECOND[5]}"]='1 1')
 
-#ARGX+=(["${MATRIX[4]}_${PRECOND[0]}"]='6 3')
-#ARGX+=(["${MATRIX[4]}_${PRECOND[1]}"]='100 1')
-#ARGX+=(["${MATRIX[4]}_${PRECOND[2]}"]='2 1')
-#ARGX+=(["${MATRIX[4]}_${PRECOND[3]}"]='15 15')
-#ARGX+=(["${MATRIX[4]}_${PRECOND[4]}"]='1 1')
-#ARGX+=(["${MATRIX[4]}_${PRECOND[5]}"]='-1')
+ARGX+=(["${MATRIX[4]}_${PRECOND[0]}"]='6 3')
+ARGX+=(["${MATRIX[4]}_${PRECOND[1]}"]='-1')
+ARGX+=(["${MATRIX[4]}_${PRECOND[2]}"]='1 3')
+ARGX+=(["${MATRIX[4]}_${PRECOND[3]}"]='6 3')
+ARGX+=(["${MATRIX[4]}_${PRECOND[4]}"]='-1')
+ARGX+=(["${MATRIX[4]}_${PRECOND[5]}"]='-1')
 
-#ARGX+=(["${MATRIX[5]}_${PRECOND[0]}"]='5 5')
-#ARGX+=(["${MATRIX[5]}_${PRECOND[1]}"]='-1')
-#ARGX+=(["${MATRIX[5]}_${PRECOND[2]}"]='25 25')
-#ARGX+=(["${MATRIX[5]}_${PRECOND[3]}"]='-1')
-#ARGX+=(["${MATRIX[5]}_${PRECOND[4]}"]='1 1')
-#ARGX+=(["${MATRIX[5]}_${PRECOND[5]}"]='-1')
+ARGX+=(["${MATRIX[5]}_${PRECOND[0]}"]='5 5')
+ARGX+=(["${MATRIX[5]}_${PRECOND[1]}"]='-1')
+ARGX+=(["${MATRIX[5]}_${PRECOND[2]}"]='25 25')
+ARGX+=(["${MATRIX[5]}_${PRECOND[3]}"]='-1')
+ARGX+=(["${MATRIX[5]}_${PRECOND[4]}"]='1 1')
+ARGX+=(["${MATRIX[5]}_${PRECOND[5]}"]='-1')
 
 
 NUM_GPUS=1
