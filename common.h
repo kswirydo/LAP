@@ -17,13 +17,13 @@
 #	define NOACC 0
 #endif
 #ifndef CUDA
-#	define CUDA 1
+#	define CUDA 0
 #endif
 #ifndef OPENMP
 #	define OPENMP 0
 #endif
 #ifndef HIP
-#define HIP 0
+#define HIP 1
 #endif
 
 typedef struct{
