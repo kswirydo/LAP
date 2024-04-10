@@ -73,6 +73,10 @@ void read_mm_file(const char *matrixFileName, mmatrix *A)
   fclose(fpm);
 }
 
+/* coo to sorted coo */
+
+
+
 /* read adjacency matrix and make it into (unweighted) graph Laplacian*/
 
 void read_adjacency_file(const char *matrixFileName, mmatrix *A) 
@@ -248,7 +252,9 @@ void read_rhs(const char *rhsFileName, real_type *rhs) {
   double val;
   /* allocate */
 
-  while (fgets(lineBuffer, sizeof(lineBuffer), fpr) != NULL) {
+  /* if there are multiple rhs in a file, read the first one only, ignore the rest */
+
+  while ((fgets(lineBuffer, sizeof(lineBuffer), fpr) != NULL) && (i != N )) {
     sscanf(lineBuffer, "%lf", &val);
     rhs[i] = (real_type) val;
     //   printf("rhs[%d] = %16.18f \n",i, val);

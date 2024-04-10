@@ -108,7 +108,14 @@ void cg(int n, real_type nnz,
       *flag = 0;
       notconv = 0;
       *it = iter; 
-    } else {
+  
+      /* r = A*x */
+      csr_matvec(n, nnz, ia, ja, a, x, r, &one, &zero, "A");
+
+      /* r = -b +r = Ax-b */
+      axpy(n, -1.0, b, r);
+      printf("TRUE Norm of r %5.5e relative %16.16e\n", sqrt(dot(n, r,r)), sqrt(dot(n, r,r))/sqrt(dot(n, b,b)));  
+  } else {
       if (iter > maxit){
         *flag = 1;
         notconv = 0;

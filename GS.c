@@ -107,7 +107,7 @@ void GS_it2(int *ia, int *ja, real_type *a,int nnzA, pdata *prec_data, real_type
   for (int j = 0; j < m; ++j) {
 
     /* inner loop 1 */
-    for (int i = 0; i < 1; ++i){
+for (int i = 0; i < 1; ++i){
       /* L*(Dinv*b) */
       csr_matvec(n, prec_data->lnnz,prec_data->lia,  prec_data->lja,  prec_data->la, prec_data->aux_vec1,  prec_data->aux_vec2, &one, &zero, "L");
       /* U*(Dinv*b) */
@@ -120,7 +120,7 @@ void GS_it2(int *ia, int *ja, real_type *a,int nnzA, pdata *prec_data, real_type
       /* scale */
       vec_vec(n, prec_data->aux_vec3, prec_data->d_r, prec_data->aux_vec2);
     } /* inner loop 1 */
-    /* compute residual:  r = b - L*y; */
+  /* compute residual:  r = b - L*y; */
     /* vec3 = b */
     vec_copy(n, vec_in, prec_data->aux_vec3);
     /* vec1 = L*y = L*vec2 */
