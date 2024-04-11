@@ -52,7 +52,7 @@ export CUDA_VISIBLE_DEVICES=${devices}
 sleep 1s
 for idx in {1..5}; do
 for precond in "${PRECOND[@]}"; do
-	i=0
+	x=0
 	for mtx in "${MATRIX[@]}"; do
 		key="${mtx}_${precond}"
 		if [[ ${ARGX[${key}]}  == '-1' ]]; then continue; fi
@@ -81,8 +81,12 @@ for precond in "${PRECOND[@]}"; do
 		
 		echo "Running the code"
 		mtxr=${MTX_HOME}/${mtx}
+		hrsxr=''
+                if [[ ${RHS[$x]}  != '' ]]; then
+                        hrsxr=${MTX_HOME}/${RHS[$x]}
+                fi
 		sleep 1s
-		full_command="${SCRIPT} ${mtxr} ${precond} 1e-12 25000 ${ARGX[${key}]} ${RHS[$i]}"
+		full_command="${SCRIPT} ${mtxr} ${precond} 1e-12 25000 ${ARGX[${key}]} ${hrsxr}"
 		echo "CMD: " + $full_command
 		${full_command} > ${RES_OUT_HOME}/output.txt
 		
@@ -96,7 +100,7 @@ for precond in "${PRECOND[@]}"; do
 		echo "Done"
 		sleep 5s
 		cd ..
-		let i++
+		let x++
 	done
 done
 done
