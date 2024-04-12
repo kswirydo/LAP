@@ -53,9 +53,10 @@ RES_COLLECTIVE="./hip_laplacian_results/"
 #sleep 1s
 for idx in {1..5}; do
 for precond in "${PRECOND[@]}"; do
-	x=0
+	x=-1
 	for mtx in "${MATRIX[@]}"; do
 		key="${mtx}_${precond}"
+		let x++
 		if [[ ${ARGX[${key}]}  == '-1' ]]; then continue; fi
 		echo "Preconditioner = ${precond}; Matrix = ${mtx}; Repetition: $idx"
 		echo "Creating directories"
@@ -76,7 +77,6 @@ for precond in "${PRECOND[@]}"; do
 		sleep 1s
 		power_sids=()
 		for ((i = 0; i < ${NUM_GPUS} ; i++)); do
-		#	nvidia-smi -i ${i} --loop-ms=1000 --format=csv --query-gpu=power.draw,utilization.gpu,utilization.memory > ${RES_HOME}/gpu_${i}.txt &
 			${HIP_POWER_SCRIPT} > ${RES_HOME}/gpu_${i}.txt &
 			power_sids+=($!)
 		done
@@ -103,7 +103,6 @@ for precond in "${PRECOND[@]}"; do
 		echo "Done"
 		sleep 5s
 		cd ..
-		let x++
 	done
 done
 done

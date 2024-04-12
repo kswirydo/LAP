@@ -66,8 +66,9 @@ RES_COLLECTIVE="./hip_results_CG/"
 #sleep 1s
 for idx in {1..5}; do
 for precond in "${PRECOND[@]}"; do
-	x=0
+	x=-1
 	for mtx in "${MATRIX[@]}"; do
+		let x++
 		key="${mtx}_${precond}"
 		if [[ ${ARGX[${key}]}  == '-1' ]]; then continue; fi
 		echo "Preconditioner = ${precond}; Matrix = ${mtx}; Repetition: $idx"
@@ -115,7 +116,6 @@ for precond in "${PRECOND[@]}"; do
 		echo "Done"
 		sleep 5s
 		cd ..
-		let x++
 	done
 done
 done
