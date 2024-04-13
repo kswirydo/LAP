@@ -9,7 +9,8 @@ void it_jacobi(int *ia, int *ja, real_type *a,int nnzA, pdata *prec_data, real_t
   real_type one = 1.0;
   real_type zero = 0.0;  
 
-  vec_vec(n, prec_data->d_r, vec_in, vec_out);
+//  vec_vec(n, prec_data->d_r, vec_in, vec_out);
+  vec_zero(n, vec_out);
 
   for (int i = 0; i < k; ++i) {
     /* vec_out = (v).*(vec_in - U*vec_out-L*vec_out); */
