@@ -41,7 +41,7 @@ void openmp_csr_matvec(const int n,
  for (i = 0; i < n; ++i) {
     /* go through each column in this row */
     s = result[i] * beta;  
-//#pragma omp reduction(+:s)
+#pragma omp reduction(+:s)
     for (j = ia[i]; j < ia[i + 1]; j++) {
       col = ja[j];
       s += (alpha * a[j] * x[col]);
