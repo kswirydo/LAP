@@ -322,7 +322,9 @@ int main(int argc, char *argv[])
                                          prec_data->unnz,
                                          prec_data->uia,
                                          prec_data->uja,
-                                         prec_data->ua);
+                                         prec_data->ua,
+					 prec_data->aux_vec1, 
+					 prec_data->aux_vec2);
   }
 
   if (strcmp(prec_data->prec_op, "ichol")  == 0) {
@@ -334,7 +336,9 @@ int main(int argc, char *argv[])
                      A->nnz_unpacked, 
                      A->csr_ia, 
                      A->csr_ja, 
-                     prec_data->ichol_vals);
+		     prec_data->ichol_vals, 
+		     prec_data->aux_vec1,
+		     prec_data->aux_vec2);
   }
 #endif
 #if CUDA

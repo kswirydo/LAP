@@ -18,8 +18,14 @@ static void *ichol_buffer; // in ichol, we can get away with one buffer
 static cusparseSpMatDescr_t matA = NULL;
 static cusparseSpMatDescr_t matL;
 static cusparseSpMatDescr_t matU;
-static cusparseMatDescr_t descrL, descrU, descrLt, descrM; // last two are used only for incomplete CHolesky
+static cusparseMatDescr_t descrLt, descrM; // last two are used only for incomplete CHolesky
+#if (H100 != 1)
 static  csrsv2Info_t infoL, infoU, infoLt;
+static cusparseMatDescr_t descrL, descrU;
+#else
+static cusparseSpSVDescr_t  descrL, descrU;
+static cusparseSpSVDescr_t descrLichol;
+#endif
 csric02Info_t infoM  = 0; // used only for Incomplete Cholesky
 
 #define policy CUSPARSE_SOLVE_POLICY_USE_LEVEL 
@@ -104,8 +110,14 @@ void initialize_and_analyze_L_and_U_solve(const int n,
                                           const int nnzU, 
                                           int *uia, 
                                           int *uja, 
-                                          real_type *ua){
+					  real_type *ua,
+					  real_type *vecx_data,
+					  real_type *vecy_data)
+{
 
+#if (H100 != 1)
+  int L_buffer_size;  
+  int U_buffer_size; 
   cusparseCreateMatDescr(&(descrL));
   cusparseSetMatIndexBase(descrL, CUSPARSE_INDEX_BASE_ZERO);
   cusparseSetMatFillMode(descrL, CUSPARSE_FILL_MODE_LOWER);
@@ -115,8 +127,6 @@ void initialize_and_analyze_L_and_U_solve(const int n,
   cusparseSetMatFillMode(descrU, CUSPARSE_FILL_MODE_UPPER);
   cusparseCreateCsrsv2Info(&infoL);
   cusparseCreateCsrsv2Info(&infoU);
-  int L_buffer_size;  
-  int U_buffer_size;  
 #if USE_FP64 // it is double 
     cusparseDcsrsv2_bufferSize(handle_cusparse, 
                                CUSPARSE_OPERATION_NON_TRANSPOSE, 
@@ -220,6 +230,222 @@ void initialize_and_analyze_L_and_U_solve(const int n,
                                                policy, 
                                                U_buffer);
 #endif
+//end of FP32 code
+#else //We ARE using cuda/12 or H100
+
+  size_t L_buffer_size;  
+  size_t U_buffer_size; 
+#if USE_FP64 // it is double 
+    cusparseCreateCsr(&matL, 
+		      n, 
+		      n, 
+		      nnzL,
+		      lia, 
+		      lja, 
+		      la,
+		      CUSPARSE_INDEX_32I, 
+		      CUSPARSE_INDEX_32I,
+		      CUSPARSE_INDEX_BASE_ZERO, 
+		      CUDA_R_64F);
+    cusparseCreateCsr(&matU, 
+		      n, 
+		      n, 
+		      nnzU,
+		      uia, 
+		      uja, 
+		      ua,
+		      CUSPARSE_INDEX_32I, 
+		      CUSPARSE_INDEX_32I,
+		      CUSPARSE_INDEX_BASE_ZERO, 
+		      CUDA_R_64F);
+    //descriptors
+    cusparseSpSV_createDescr(&descrL);
+    cusparseSpSV_createDescr(&descrU);
+
+    //set fill modes
+    cusparseFillMode_t fillmodeL = CUSPARSE_FILL_MODE_LOWER;
+    cusparseFillMode_t fillmodeU = CUSPARSE_FILL_MODE_UPPER;
+    cusparseSpMatSetAttribute(matL, 
+			      CUSPARSE_SPMAT_FILL_MODE,
+			      &fillmodeL, 
+			      sizeof(fillmodeL)); 
+    cusparseSpMatSetAttribute(matU, 
+			      CUSPARSE_SPMAT_FILL_MODE,
+			      &fillmodeU, 
+			      sizeof(fillmodeU)); 
+
+   //set diag types (note: both are NON UNIT)
+    cusparseDiagType_t diagtype = CUSPARSE_DIAG_TYPE_NON_UNIT;
+    cusparseSpMatSetAttribute(matL, 
+			      CUSPARSE_SPMAT_DIAG_TYPE,
+			      &diagtype, 
+			      sizeof(diagtype));
+    cusparseSpMatSetAttribute(matU, 
+			      CUSPARSE_SPMAT_DIAG_TYPE,
+			      &diagtype, 
+			      sizeof(diagtype));
+    // vectors 
+    cusparseDnVecDescr_t vecX;
+    cusparseDnVecDescr_t vecY;
+    
+    cusparseCreateDnVec(&vecX, n, vecx_data, CUDA_R_64F);
+    cusparseCreateDnVec(&vecY, n, vecy_data, CUDA_R_64F);
+   
+    // allocate buffers
+    real_type alpha = 1.0;
+    cusparseSpSV_bufferSize(handle_cusparse, 
+			    CUSPARSE_OPERATION_NON_TRANSPOSE,
+			    &alpha,
+			    matL, 
+			    vecX, 
+			    vecY, 
+			    CUDA_R_64F,
+			    CUSPARSE_SPSV_ALG_DEFAULT, 
+			    descrL,
+			    &L_buffer_size);
+    cudaMalloc(&L_buffer, L_buffer_size);
+    cusparseSpSV_bufferSize(handle_cusparse, 
+			    CUSPARSE_OPERATION_NON_TRANSPOSE,
+			    &alpha,
+			    matU, 
+			    vecX, 
+			    vecY, 
+			    CUDA_R_64F,
+			    CUSPARSE_SPSV_ALG_DEFAULT, 
+			    descrU,
+			    &U_buffer_size);
+    cudaMalloc(&U_buffer, L_buffer_size);
+// analyze
+    cusparseSpSV_analysis(handle_cusparse, 
+			  CUSPARSE_OPERATION_NON_TRANSPOSE,
+			  &alpha,
+			  matL, 
+			  vecX, 
+			  vecY, 
+			  CUDA_R_64F,
+			  CUSPARSE_SPSV_ALG_DEFAULT, 
+			  descrL,
+			  L_buffer);
+
+    cusparseSpSV_analysis(handle_cusparse, 
+			  CUSPARSE_OPERATION_NON_TRANSPOSE,
+			  &alpha,
+			  matU, 
+			  vecX, 
+			  vecY, 
+			  CUDA_R_64F,
+			  CUSPARSE_SPSV_ALG_DEFAULT, 
+			  descrU,
+			  U_buffer);
+
+#else // same code but for single
+
+    cusparseCreateCsr(&matL, 
+		      n, 
+		      n, 
+		      nnzL,
+		      lia, 
+		      lja, 
+		      la,
+		      CUSPARSE_INDEX_32I, 
+		      CUSPARSE_INDEX_32I,
+		      CUSPARSE_INDEX_BASE_ZERO, 
+		      CUDA_R_32F);
+    cusparseCreateCsr(&matU, 
+		      n, 
+		      n, 
+		      nnzU,
+		      uia, 
+		      uja, 
+		      ua,
+		      CUSPARSE_INDEX_32I, 
+		      CUSPARSE_INDEX_32I,
+		      CUSPARSE_INDEX_BASE_ZERO, 
+		      CUDA_R_32F);
+    //descriptors
+    cusparseSpSV_createDescr(&descrL);
+    cusparseSpSV_createDescr(&descrU);
+
+    //set fill modes
+    cusparseFillMode_t fillmodeL = CUSPARSE_FILL_MODE_LOWER;
+    cusparseFillMode_t fillmodeU = CUSPARSE_FILL_MODE_UPPER;
+    cusparseSpMatSetAttribute(matL, 
+			      CUSPARSE_SPMAT_FILL_MODE,
+			      &fillmodeL, 
+			      sizeof(fillmodeL)); 
+    cusparseSpMatSetAttribute(matU, 
+			      CUSPARSE_SPMAT_FILL_MODE,
+			      &fillmodeU, 
+			      sizeof(fillmodeU)); 
+
+   //set diag types (note: both are NON UNIT)
+    cusparseDiagType_t diagtype = CUSPARSE_DIAG_TYPE_NON_UNIT;
+    cusparseSpMatSetAttribute(matL, 
+			      CUSPARSE_SPMAT_DIAG_TYPE,
+			      &diagtype, 
+			      sizeof(diagtype));
+    cusparseSpMatSetAttribute(matU, 
+			      CUSPARSE_SPMAT_DIAG_TYPE,
+			      &diagtype, 
+			      sizeof(diagtype));
+    // vectors 
+    cusparseDnVecDescr_t vecX;
+    cusparseDnVecDescr_t vecY;
+    
+    cusparseCreateDnVec(&vecX, n, vecx_data, CUDA_R_32F);
+    cusparseCreateDnVec(&vecY, n, vecy_data, CUDA_R_32F);
+   
+    // allocate buffers
+    real_type alpha = 1.0;
+    cusparseSpSV_bufferSize(handle_cusparse, 
+			    CUSPARSE_OPERATION_NON_TRANSPOSE,
+			    &alpha,
+			    matL, 
+			    vecX, 
+			    vecY, 
+			    CUDA_R_32F,
+			    CUSPARSE_SPSV_ALG_DEFAULT, 
+			    descrL,
+			    &L_buffer_size);
+    cudaMalloc(&L_buffer, L_buffer_size);
+    cusparseSpSV_bufferSize(handle_cusparse, 
+			    CUSPARSE_OPERATION_NON_TRANSPOSE,
+			    &alpha,
+			    matU, 
+			    vecX, 
+			    vecY, 
+			    CUDA_R_32F,
+			    CUSPARSE_SPSV_ALG_DEFAULT, 
+			    descrU,
+			    &U_buffer_size);
+    cudaMalloc(&U_buffer, L_buffer_size);
+// analyze
+    cusparseSpSV_analysis(handle_cusparse, 
+			  CUSPARSE_OPERATION_NON_TRANSPOSE,
+			  &alpha,
+			  matL, 
+			  vecX, 
+			  vecY, 
+			  CUDA_R_32F,
+			  CUSPARSE_SPSV_ALG_DEFAULT, 
+			  descrL,
+			  L_buffer);
+
+    cusparseSpSV_analysis(handle_cusparse, 
+			  CUSPARSE_OPERATION_NON_TRANSPOSE,
+			  &alpha,
+			  matU, 
+			  vecX, 
+			  vecY, 
+			  CUDA_R_32F,
+			  CUSPARSE_SPSV_ALG_DEFAULT, 
+			  descrU,
+			  U_buffer);
+#endif // F32 vs F64
+  cusparseDestroyDnVec(vecX);
+  cusparseDestroyDnVec(vecY);
+#endif //H100
+ 
 }
 
 
@@ -262,23 +488,29 @@ void initialize_ichol(const int n,
                       const int nnzA, 
                       int *ia, 
                       int *ja, 
-                      real_type *a)
+                      real_type *a,
+		      real_type *xdata,
+		      real_type *ydata)
 {
-
-  printf("initializing ICHOL \n");
+#if 1  
+printf("initializing ICHOL \n");
   cusparseCreateMatDescr(&descrM);
   cusparseSetMatIndexBase(descrM, CUSPARSE_INDEX_BASE_ZERO);
   cusparseSetMatType(descrM, CUSPARSE_MATRIX_TYPE_GENERAL);
+  cusparseCreateCsric02Info(&infoM);
 
+#if (H100 != 1)
+printf("OLD style - initializing info variables ...\n");
   cusparseCreateMatDescr(&descrL);
   cusparseSetMatIndexBase(descrL, CUSPARSE_INDEX_BASE_ZERO);
   cusparseSetMatType(descrL, CUSPARSE_MATRIX_TYPE_GENERAL);
   cusparseSetMatFillMode(descrL, CUSPARSE_FILL_MODE_LOWER);
   cusparseSetMatDiagType(descrL, CUSPARSE_DIAG_TYPE_NON_UNIT);
 
-  cusparseCreateCsric02Info(&infoM);
   cusparseCreateCsrsv2Info(&infoL);
   cusparseCreateCsrsv2Info(&infoLt);
+#endif  
+  
   int structural_zero;
   int numerical_zero; 
 
@@ -298,11 +530,13 @@ void initialize_ichol(const int n,
                                                      infoM, 
                                                      &bufferSizeM);
 
+#if (H100 != 1)
+printf("OLD style - buffer sizes ...\n");
       status_cusparse =  cusparseDcsrsv2_bufferSize(handle_cusparse, 
                                                     CUSPARSE_OPERATION_NON_TRANSPOSE, 
                                                     n, 
                                                     nnzA,
-                                                    descrL, 
+                                                    descrLichol, 
                                                     a, 
                                                     ia, 
                                                     ja, 
@@ -313,12 +547,76 @@ void initialize_ichol(const int n,
                                                     CUSPARSE_OPERATION_TRANSPOSE, 
                                                     n, 
                                                     nnzA,
-                                                    descrL, 
+                                                    descrLichol, 
                                                     a, 
                                                     ia, 
                                                     ja, 
                                                     infoLt, 
                                                     &bufferSizeLt);
+#else
+// CUDA 12 aka H100
+printf("New style - buffer sizes ...\n");
+size_t bL, bLt;
+      cusparseDnVecDescr_t vecX;
+      cusparseDnVecDescr_t vecY;
+
+      cusparseCreateDnVec(&vecX, n, xdata, CUDA_R_64F);
+      cusparseCreateDnVec(&vecY, n, ydata, CUDA_R_64F);
+      double alpha =1.0;
+      cusparseCreateCsr(&matL, 
+			n, 
+			n, 
+			nnzA,
+			a, 
+			ia, 
+			ja, 
+			CUSPARSE_INDEX_32I, 
+			CUSPARSE_INDEX_32I,
+			CUSPARSE_INDEX_BASE_ZERO, 
+			CUDA_R_64F);
+
+printf("New style - mat L created ...\n");
+    cusparseSpSV_createDescr(&descrLichol);
+
+    //set fill modes
+    cusparseFillMode_t fillmodeL = CUSPARSE_FILL_MODE_LOWER;
+    cusparseSpMatSetAttribute(matL, 
+			      CUSPARSE_SPMAT_FILL_MODE,
+			      &fillmodeL, 
+			      sizeof(fillmodeL)); 
+
+   //set diag types (note: both are NON UNIT)
+    cusparseDiagType_t diagtype = CUSPARSE_DIAG_TYPE_NON_UNIT;
+    cusparseSpMatSetAttribute(matL, 
+			      CUSPARSE_SPMAT_DIAG_TYPE,
+			      &diagtype, 
+			      sizeof(diagtype));
+
+    cusparseSpSV_bufferSize(handle_cusparse, 
+			    CUSPARSE_OPERATION_NON_TRANSPOSE,
+			    &alpha,
+			    matL, 
+			    vecX, 
+			    vecY, 
+			    CUDA_R_64F,
+			    CUSPARSE_SPSV_ALG_DEFAULT, 
+			    descrLichol,
+                            &bL);
+    cusparseSpSV_bufferSize(handle_cusparse, 
+			    CUSPARSE_OPERATION_TRANSPOSE,
+			    &alpha,
+			    matL, 
+			    vecX, 
+			    vecY, 
+			    CUDA_R_64F,
+			    CUSPARSE_SPSV_ALG_DEFAULT, 
+			    descrLichol,
+                            &bLt);
+    bufferSizeL =  (int) bL;
+    bufferSizeLt =  (int) bLt;
+
+printf("New style - buffer sizes (L, Lt) : %d and %d ...\n", bufferSizeL, bufferSizeLt);
+#endif
 #else
 
       status_cusparse =  cusparseScsric02_bufferSize(handle_cusparse, 
@@ -335,7 +633,7 @@ void initialize_ichol(const int n,
                                                     CUSPARSE_OPERATION_NON_TRANSPOSE, 
                                                     n, 
                                                     nnzA,
-                                                    descrL, 
+                                                    descrLichol, 
                                                     a, 
                                                     ia, 
                                                     ja, 
@@ -346,7 +644,7 @@ void initialize_ichol(const int n,
                                                     CUSPARSE_OPERATION_TRANSPOSE, 
                                                     n, 
                                                     nnzA,
-                                                    descrL, 
+                                                    descrLichol, 
                                                     a, 
                                                     ia, 
                                                     ja, 
@@ -357,7 +655,7 @@ void initialize_ichol(const int n,
   bufferSize = max(bufferSizeM, max(bufferSizeL, bufferSizeLt));
 
   cudaMalloc((void**) &ichol_buffer, bufferSize);
-
+printf("final bufferSize %d \n", bufferSize);
   /* and now analyze */
 
 #if USE_FP64 // it is double 
@@ -379,11 +677,12 @@ void initialize_ichol(const int n,
 
   /* analyze the solves as well */
 
+#if (H100 != 1)
   status_cusparse = cusparseDcsrsv2_analysis(handle_cusparse, 
                                              CUSPARSE_OPERATION_NON_TRANSPOSE, 
                                              n, 
                                              nnzA, 
-                                             descrL,
+                                             descrLichol,
                                              a, 
                                              ia, 
                                              ja,
@@ -395,7 +694,7 @@ void initialize_ichol(const int n,
                                              CUSPARSE_OPERATION_TRANSPOSE, 
                                              n, 
                                              nnzA, 
-                                             descrL,
+                                             descrLichol,
                                              a, 
                                              ia, 
                                              ja,
@@ -403,6 +702,33 @@ void initialize_ichol(const int n,
                                              policy, 
                                              ichol_buffer);
 
+printf("Old style -  solve analysis complete \n");
+#else
+// H100 + CUDA 12
+
+    cusparseSpSV_analysis(handle_cusparse, 
+			  CUSPARSE_OPERATION_NON_TRANSPOSE,
+			  &alpha,
+			  matL, 
+			  vecX, 
+			  vecY, 
+			  CUDA_R_64F,
+			  CUSPARSE_SPSV_ALG_DEFAULT, 
+			  descrLichol,
+			  ichol_buffer);
+
+    cusparseSpSV_analysis(handle_cusparse, 
+			  CUSPARSE_OPERATION_TRANSPOSE,
+			  &alpha,
+			  matL, 
+			  vecX, 
+			  vecY, 
+			  CUDA_R_64F,
+			  CUSPARSE_SPSV_ALG_DEFAULT, 
+			  descrLichol,
+			  ichol_buffer);
+printf("New style -  solve analysis complete \n");
+#endif
   /* decompose */
   status_cusparse = cusparseDcsric02(handle_cusparse, 
                                      n, 
@@ -421,6 +747,7 @@ void initialize_ichol(const int n,
   if (CUSPARSE_STATUS_ZERO_PIVOT == status_cusparse) {
     printf("We have another problem: L(%d,%d) is zero\n", numerical_zero, numerical_zero);
   }
+printf("ichol analysis complete \n");
 #else
 
   status_cusparse = cusparseScsric02_analysis(handle_cusparse,
@@ -445,7 +772,7 @@ void initialize_ichol(const int n,
                                              CUSPARSE_OPERATION_NON_TRANSPOSE, 
                                              n, 
                                              nnzA, 
-                                             descrL,
+                                             descrLichol,
                                              a, 
                                              ia, 
                                              ja,
@@ -457,7 +784,7 @@ void initialize_ichol(const int n,
                                              CUSPARSE_OPERATION_TRANSPOSE, 
                                              n, 
                                              nnzA, 
-                                             descrL,
+                                             descrLichol,
                                              a, 
                                              ia, 
                                              ja,
@@ -484,6 +811,7 @@ void initialize_ichol(const int n,
     printf("We have another problem: L(%d,%d) is zero\n", numerical_zero, numerical_zero);
   }
 #endif
+#endif
 }
 
 
@@ -495,8 +823,9 @@ void cuda_ichol(const int *ia,
                 real_type *x, 
                 real_type *y) {
   real_type one = 1.0;
-
-#if USE_FP64 // it is double 
+#if (H100 != 1)
+#if USE_FP64 // it is double
+#if (H100! = 1) 
   cusparseDcsrsv2_solve(handle_cusparse, 
                         CUSPARSE_OPERATION_NON_TRANSPOSE, 
                         prec_data->n, 
@@ -526,6 +855,37 @@ void cuda_ichol(const int *ia,
                         y, 
                         policy, 
                         ichol_buffer);
+#else
+
+  cusparseDnVecDescr_t vecX;
+  cusparseDnVecDescr_t vecY;
+  cusparseDnVecDescr_t vecT;
+  cusparseCreateDnVec(&vecX, n,  x, CUDA_R_64F);
+  cusparseCreateDnVec(&vecY, n,  y, CUDA_R_64F);
+  cusparseCreateDnVec(&vecT, n,  prec_data->aux_vec1, CUDA_R_64F);
+  cusparseSpSV_solve(handle_cusparse, 
+		     CUSPARSE_OPERATION_NON_TRANSPOSE,
+		     &one, 
+		     matL, 
+		     vecX, 
+		     vecT, 
+		     CUDA_R_64F,
+		     CUSPARSE_SPSV_ALG_DEFAULT, 
+		     descrLichol); 
+  cusparseSpSV_solve(handle_cusparse, 
+		     CUSPARSE_OPERATION_TRANSPOSE,
+		     &one, 
+		     matL, 
+		     vecT, 
+		     vecY, 
+		     CUDA_R_64F,
+		     CUSPARSE_SPSV_ALG_DEFAULT, 
+		     descrLichol); 
+  cusparseDestroyDnVec(vecX);
+  cusparseDestroyDnVec(vecY);
+  cusparseDestroyDnVec(vecT);
+#endif
+
 #else //sp
 
   cusparseScsrsv2_solve(handle_cusparse, 
@@ -557,6 +917,7 @@ void cuda_ichol(const int *ia,
                         y, 
                         policy, 
                         ichol_buffer);
+#endif
 #endif
 }
 
@@ -734,12 +1095,15 @@ void cuda_lower_triangular_solve(const int n,
                                  const int *lja, 
                                  const real_type *la,
                                  const real_type *diagonal, 
-                                 const real_type *x, real_type *result){
+                                 const real_type *x, 
+                                 real_type *result){
   /* compute result = L^{-1}x */
   /* we DO NOT assume anything about L diagonal */
   /* d_x3 = L^(-1)dx2 */
 
   real_type one = 1.0;
+
+#if (H100 != 1)
 #if USE_FP64
   cusparseStatus_t status = cusparseDcsrsv2_solve(handle_cusparse, 
                                                   CUSPARSE_OPERATION_NON_TRANSPOSE, 
@@ -772,6 +1136,24 @@ void cuda_lower_triangular_solve(const int n,
                                                   policy,
                                                   L_buffer);
 #endif
+#else // cuda 12 or H100
+  cusparseDnVecDescr_t vecX;
+  cusparseDnVecDescr_t vecY;
+  cusparseCreateDnVec(&vecX, n, (double *) x, CUDA_R_64F);
+  cusparseCreateDnVec(&vecY, n, result, CUDA_R_64F);
+  cusparseSpSV_solve(handle_cusparse, 
+		     CUSPARSE_OPERATION_NON_TRANSPOSE,
+		     &one, 
+		     matL, 
+		     vecX, 
+		     vecY, 
+		     CUDA_R_64F,
+		     CUSPARSE_SPSV_ALG_DEFAULT, 
+		     descrL); 
+  cusparseDestroyDnVec(vecX);
+  cusparseDestroyDnVec(vecY);
+
+#endif
 }
 
 
@@ -786,6 +1168,7 @@ void cuda_upper_triangular_solve(const int n,
 
   /* compute result = U^{-1}x */
   real_type one = 1.0;
+#if (H100 != 1)
 #if USE_FP64 
  cusparseDcsrsv2_solve(handle_cusparse, 
                         CUSPARSE_OPERATION_NON_TRANSPOSE, 
@@ -816,6 +1199,25 @@ void cuda_upper_triangular_solve(const int n,
                         result,
                         policy,
                         U_buffer);
+#endif
+#else // cuda 12 or H100
+  cusparseDnVecDescr_t vecX;
+  cusparseDnVecDescr_t vecY;
+  cusparseCreateDnVec(&vecX, n, (double *) x, CUDA_R_64F);
+  cusparseCreateDnVec(&vecY, n, result, CUDA_R_64F);
+  cusparseSpSV_solve(handle_cusparse, 
+		     CUSPARSE_OPERATION_NON_TRANSPOSE,
+		     &one, 
+		     matU, 
+		     vecX, 
+		     vecY, 
+		     CUDA_R_64F,
+		     CUSPARSE_SPSV_ALG_DEFAULT, 
+		     descrU); 
+  cusparseDestroyDnVec(vecX);
+  cusparseDestroyDnVec(vecY);
+
+
 #endif
 }
 

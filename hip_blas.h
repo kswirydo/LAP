@@ -21,7 +21,9 @@ void initialize_and_analyze_L_and_U_solve(const int n,
                                               const int nnzU, 
                                               int *uia, 
                                               int *uja, 
-                                              real_type *ua);
+					      real_type *ua,
+					      real_type *vecx,
+					      real_type *vecy);
 
 real_type hip_dot (const int n, const real_type *v, const real_type *w);
 
@@ -74,7 +76,9 @@ void initialize_ichol(const int n,
                       const int nnzA, 
                       int *ia, 
                       int *ja, 
-                      real_type *a);
+                      real_type *a,
+		      real_type *xdata,
+		      real_type *ydata);
 
 void hip_ichol(const int *ia, 
                const int *ja, 

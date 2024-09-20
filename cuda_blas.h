@@ -61,14 +61,16 @@ void initialize_spmv_buffer(const int n,
 
 
 void initialize_and_analyze_L_and_U_solve(const int n, 
-                                          const int nnzL, 
-                                          int *lia, 
-                                          int *lja, 
-                                          real_type *la,
-                                          const int nnzU, 
-                                          int *uia, 
-                                          int *uja, 
-                                          real_type *ua);
+					  const int nnzL, 
+					  int *lia, 
+					  int *lja, 
+					  real_type *la,
+					  const int nnzU, 
+					  int *uia, 
+					  int *uja, 
+					  real_type *ua,
+					  real_type *vecx,
+					  real_type *vecy);
 
 void initialize_L_and_U_descriptors(const int n, 
                                   const int nnzL, 
@@ -84,7 +86,10 @@ void initialize_ichol(const int n,
                       const int nnzA, 
                       int *ia, 
                       int *ja, 
-                      real_type *a);
+                      real_type *a,
+		      real_type *xdata,
+		      real_type *ydata);
+
 
 void cuda_ichol(const int *ia, 
                 const int *ja, 

@@ -107,7 +107,10 @@ void initialize_and_analyze_L_and_U_solve(const int n,
                                           const int nnzU, 
                                           int *uia, 
                                           int *uja, 
-                                          real_type *ua){
+					  real_type *ua,
+					  real_type *vecx,
+					  real_type *vecy)
+{
 
   size_t L_buffer_size;  
   size_t U_buffer_size;  
@@ -176,7 +179,9 @@ void initialize_ichol(const int n,
                       const int nnzA, 
                       int *ia, 
                       int *ja, 
-                      real_type *a)
+                      real_type *a,
+		      real_type *xdata,
+		      real_type *ydata)
 {
   // printf("initializing ICHOLi, n = %d, nnzA = %d \n",n,nnzA);
   /* Create matrix descriptor for M */
