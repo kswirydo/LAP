@@ -2,9 +2,10 @@ CC := g++
 NVCC := nvcc
 AR := ar
 INCLUDES  :=  
+# set H100=1 for CUDA12 and above
 CONF_FLAGS := -DV100=0 -DNOACC=0 -DCUDA=1 -DOPENMP=0 -DHIP=0 -DH100=1
 CUDA_LIBS := -lcusparse -lcublas
-NVCC_FLAGS := -arch=sm_90  
+NVCC_FLAGS := -arch=sm_80  
 CPP_FLAGS := -x cu
 FLAGS := -O3 -g
 CFLAGS :=   

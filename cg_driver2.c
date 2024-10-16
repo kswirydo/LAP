@@ -331,6 +331,15 @@ int main(int argc, char *argv[])
 #if (CUDA || HIP)
     prec_data->ichol_vals = (real_type *) mallocForDevice (prec_data->ichol_vals, (A->nnz_unpacked), sizeof(real_type));
     memcpyDevice(prec_data->ichol_vals, A->csr_vals, A->nnz_unpacked,sizeof(real_type), "D2D");
+   // it doesnt matter WHAT is in vec1 and vec2 BUT IT CANT BE ALL 0's!
+    
+    real_type *temp = (real_type *) calloc (A->n, sizeof(real_type));
+    for (int ii = 0; ii < A->n; ++ii) {
+      temp[ii] = 1.0;
+    }
+    memcpyDevice(prec_data->aux_vec1, temp, A->n,sizeof(real_type), "H2D");
+    memcpyDevice(prec_data->aux_vec2, temp, A->n,sizeof(real_type), "H2D");
+    free(temp);
 
     initialize_ichol(A->n, 
                      A->nnz_unpacked, 

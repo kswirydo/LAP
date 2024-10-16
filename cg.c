@@ -14,7 +14,8 @@ void cg(int n, real_type nnz,
         int *it, //output: iteration
         int *flag, //output: flag 0-converged, 1-maxit reached, 2-catastrophic failure
         real_type *res_norm_history //output: residual norm history
-       ){
+       )
+{
 
 #if (CUDA || HIP)
   real_type *r;
@@ -49,20 +50,21 @@ void cg(int n, real_type nnz,
 
   /* r = -b +r = Ax-b */
   axpy(n, -1.0, b, r);
-  // printf("Norm of r %e \n", dot(n, r,r));  
 
+//  printf("Norm of r %e (before scaling) \n", dot(n, r,r));  
   /* r=(-1.0)*r */
   scal(n, -1.0, r);
 
   /* norm of r */
   res_norm_history[0] = dot(n, r,r);
+ // printf("Norm of r %e \n", dot(n, r,r));  
   res_norm_history[0] = sqrt(res_norm_history[0]);
   tolrel = tol * res_norm_history[0];
 
-  printf("CG: it %d, res norm %5.5e \n",0, res_norm_history[0]);
+ printf("CG: it %d, res norm %5.5e \n",0, res_norm_history[0]);
 
   while (notconv){
-    // printf("Norm of X before prec %16.16e \n", dot(n, r,r));  
+   //  printf("Norm of X before prec %16.16e \n", dot(n, r,r));  
 #if HIP
     vec_zero(n, w);
 #endif
@@ -114,7 +116,7 @@ void cg(int n, real_type nnz,
 
       /* r = -b +r = Ax-b */
       axpy(n, -1.0, b, r);
-      printf("TRUE Norm of r %5.5e relative %16.16e\n", sqrt(dot(n, r,r)), sqrt(dot(n, r,r))/sqrt(dot(n, b,b)));  
+    //  printf("TRUE Norm of r %5.5e relative %16.16e\n", sqrt(dot(n, r,r)), sqrt(dot(n, r,r))/sqrt(dot(n, b,b)));  
   } else {
       if (iter > maxit){
         *flag = 1;
